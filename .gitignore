@@ -1,0 +1,11 @@
+build
+build-pr
+.vscode
+.idea
+example
+
+# Local/per-user scratch
+.claude/
+.directory
+*.code-workspace
+pr-review-*.md

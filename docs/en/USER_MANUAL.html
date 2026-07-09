@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>DS5Dongle User Manual</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">DS5Dongle User Manual</h1>
+</header>
+<h1 id="user-manual---ds5dongle-by-ohad-v1.0.4">User Manual - DS5Dongle
+by Ohad v1.0.4</h1>
+<h2 id="what-is-ds5dongle-by-ohad">What is DS5Dongle by Ohad?</h2>
+<p>DS5Dongle by Ohad is a Raspberry Pi Pico 2 W based dongle that
+connects a DualSense controller to a computer over Bluetooth and exposes
+it over USB. The Waveshare Pico-OLED-1.3 display shows connection
+status, settings, diagnostics, audio status, button remapping, and
+pairing slot information.</p>
+<p>Version 1.0.4 is the first stable release in the 1.0.x branch. The
+UF2 file name is <code>DS5Dongle-by-Ohad-1.0.4.uf2</code>.</p>
+<h2 id="quick-start">Quick start</h2>
+<ol type="1">
+<li>Connect the Pico 2 W to the computer using USB.</li>
+<li>Update firmware by dragging the UF2 file to the Pico BOOTSEL
+drive.</li>
+<li>Wait for the dongle to show the Boot screen and then the Status
+screen.</li>
+<li>Pair or reconnect the DualSense controller over Bluetooth.</li>
+<li>Use <code>KEY0</code> and <code>KEY1</code> on the OLED board to
+switch screens.</li>
+</ol>
+<h2 id="oled-controls">OLED controls</h2>
+<ul>
+<li><code>KEY0</code>: move to the next screen.</li>
+<li><code>KEY1</code>: move to the previous screen.</li>
+<li>Long press <code>KEY1</code>: change OLED brightness.</li>
+<li><code>KEY0 + KEY1</code> for about one second: reboot the Pico.</li>
+<li>Controller shortcut: <code>Options + D-Pad Right/Left</code>
+switches OLED screens without touching the dongle.</li>
+</ul>
+<h2 id="oled-screens">OLED screens</h2>
+<h3 id="boot">Boot</h3>
+<p>A short startup screen showing the product name and firmware
+version.</p>
+<h3 id="status">Status</h3>
+<p>Shows firmware version, Bluetooth connection state, controller
+address, battery percentage, charge indication, sticks, triggers, D-Pad,
+and face buttons.</p>
+<h3 id="slots">Slots</h3>
+<p>Manages up to 4 controller pairing slots. The active slot is marked
+with <code>*</code>. Empty slots are shown as <code>(empty)</code>.</p>
+<h3 id="lightbar">Lightbar</h3>
+<p>Controls the DualSense lightbar mode. <code>HOST</code> lets the
+computer/game control the color. <code>BATT</code> lets the dongle show
+a battery-based color.</p>
+<h3 id="trigger-test">Trigger Test</h3>
+<p>Tests the adaptive trigger feedback path for L2/R2.</p>
+<h3 id="gyro-tilt">Gyro Tilt</h3>
+<p>Shows motion/tilt data for movement testing.</p>
+<h3 id="touchpad">Touchpad</h3>
+<p>Shows touchpad state and detected finger count.</p>
+<h3 id="diagnostics">Diagnostics</h3>
+<p>Shows debug information such as uptime, USB audio rate, Bluetooth
+rate, HCI error count, and BT state.</p>
+<h3 id="bt-signal">BT Signal</h3>
+<p>Shows Bluetooth RSSI in dBm and a signal quality indicator.</p>
+<h3 id="vu-meters">VU Meters</h3>
+<p>Shows audio activity meters for speaker and haptics paths.</p>
+<h3 id="settings">Settings</h3>
+<p>Firmware settings screen. Navigate with D-Pad, change values with
+Left/Right, and save with Triangle.</p>
+<h3 id="remap">Remap</h3>
+<p>Button remapping screen. Allows mapping a physical button to another
+button, disabling a button, or assigning it to <code>PicoMic</code>.</p>
+<h2 id="settings-reference">Settings reference</h2>
+<ul>
+<li><code>Hap Gain</code>: base haptics gain.</li>
+<li><code>Spk Vol</code>: speaker/audio volume.</li>
+<li><code>Idle</code>: automatic disconnect timeout, or Off.</li>
+<li><code>Pico LED</code>: enables/disables the Pico onboard LED.</li>
+<li><code>Poll</code>: polling mode - 250Hz / 500Hz / RT.</li>
+<li><code>AudBuf</code>: audio buffer size.</li>
+<li><code>Ctrl</code>: controller mode - DS5 / DSE / Auto.</li>
+<li><code>AutoHap</code>: audio-derived haptics mode.</li>
+<li><code>AH Gain</code>: AutoHaptics gain.</li>
+<li><code>AH LP</code>: AutoHaptics low-pass filter.</li>
+<li><code>OLED Bright</code>: OLED brightness.</li>
+<li><code>OLED Rot</code>: rotates the OLED display by 180 degrees.</li>
+<li><code>Mic Gain</code>: Bluetooth microphone gain.</li>
+<li><code>ScrDim</code>: time before the OLED dims.</li>
+<li><code>ScrOff</code>: time before the OLED turns off.</li>
+<li><code>BT Mic</code>: enables the controller microphone over
+Bluetooth.</li>
+<li><code>CtrlWake</code>: controller activity wakes the OLED.</li>
+<li><code>PowerCombo</code>: <code>PS + Options</code> safe controller
+disconnect/poweroff.</li>
+<li><code>AudioKeep</code>: when ON, active audio prevents Idle
+shutdown.</li>
+<li><code>Reset to defaults</code>: resets settings to defaults.
+Requires holding Triangle.</li>
+<li><code>Wipe all slots</code>: clears all pairing slots. Requires
+holding Triangle.</li>
+</ul>
+<h2 id="how-to-use-remap">How to use Remap</h2>
+<ol type="1">
+<li>Open the Remap screen.</li>
+<li>Select a row using D-Pad Up/Down.</li>
+<li>Change the target using D-Pad Left/Right.</li>
+<li>Save with Triangle.</li>
+<li>The <code>Remap on/off</code> row controls whether the mapping table
+is active. When it is off, mappings are not applied to the report sent
+to the computer.</li>
+</ol>
+<p>Supported targets: <code>L2</code>, <code>L1</code>,
+<code>Share</code>, <code>Up</code>, <code>Left</code>,
+<code>Down</code>, <code>Right</code>, <code>L3</code>, <code>R2</code>,
+<code>R1</code>, <code>Opt</code>, <code>Tri</code>, <code>Cir</code>,
+<code>Cross</code>, <code>Sq</code>, <code>R3</code>, <code>PS</code>,
+<code>Pad</code>, <code>Mute</code>, <code>Off</code>,
+<code>PicoMic</code>.</p>
+<p>Default behavior: most buttons pass through normally. The
+<code>Mute</code> button is mapped to <code>PicoMic</code> so it can
+locally control the dongle’s Bluetooth microphone path.</p>
+<h2 id="safe-poweroff">Safe poweroff</h2>
+<p>PowerCombo and Idle shutdown use a safe poweroff path. The dongle
+returns to the Status screen, shows <code>Powering Off...</code>, saves
+pending changes, and then disconnects the controller.</p>
+<h2 id="audiokeep">AudioKeep</h2>
+<p>When AudioKeep is ON, Idle shutdown will not power off the controller
+while the computer is actively streaming audio through the dongle. This
+is useful for listening to music or using headphones through the
+controller without pressing buttons.</p>
+<h2 id="firmware-update">Firmware update</h2>
+<ol type="1">
+<li>Hold BOOTSEL on the Pico and connect USB.</li>
+<li>A drive named <code>RPI-RP2</code> appears.</li>
+<li>Drag <code>DS5Dongle-by-Ohad-1.0.4.uf2</code> onto the drive.</li>
+<li>The Pico reboots into the new firmware.</li>
+</ol>
+<h2 id="quick-troubleshooting">Quick troubleshooting</h2>
+<ul>
+<li>Controller does not connect: switch slots or wipe slots, then pair
+again.</li>
+<li>No audio: verify that Windows selected the dongle as the audio
+device, and avoid extreme <code>AudBuf</code> values.</li>
+<li>Controller shuts down while music is playing: make sure AudioKeep is
+ON.</li>
+<li>REMAP does not work: make sure Remap is ON and Triangle save
+completed with <code>Saved</code>.</li>
+<li>OLED is off: press <code>KEY0</code> / <code>KEY1</code>, or check
+<code>ScrOff</code> / <code>ScrDim</code> in Settings.</li>
+</ul>
+</body>
+</html>

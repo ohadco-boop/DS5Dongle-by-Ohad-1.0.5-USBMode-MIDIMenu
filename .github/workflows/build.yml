@@ -1,0 +1,61 @@
+name: Build OLED USB-Mode UF2
+
+env:
+  FIRMWARE_VERSION: 1.0.5
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install host tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake python3 build-essential ninja-build xz-utils git
+
+      - name: Install ARM GNU toolchain
+        run: |
+          curl -L -o arm-toolchain.tar.xz https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz
+          mkdir -p "$GITHUB_WORKSPACE/arm-toolchain"
+          tar -xf arm-toolchain.tar.xz -C "$GITHUB_WORKSPACE/arm-toolchain" --strip-components=1
+          echo "$GITHUB_WORKSPACE/arm-toolchain/bin" >> "$GITHUB_PATH"
+
+      - name: Download Pico SDK 2.2.0 + TinyUSB 0.20.0
+        run: |
+          git clone --depth 1 --branch 2.2.0 https://github.com/raspberrypi/pico-sdk.git "$GITHUB_WORKSPACE/pico-sdk"
+          git -C "$GITHUB_WORKSPACE/pico-sdk" submodule update --init --recursive
+          git -C "$GITHUB_WORKSPACE/pico-sdk/lib/tinyusb" fetch --depth 1 origin refs/tags/0.20.0:refs/tags/0.20.0
+          git -C "$GITHUB_WORKSPACE/pico-sdk/lib/tinyusb" checkout --detach 0.20.0
+
+      - name: Download project libraries
+        run: |
+          rm -rf lib/WDL lib/opus
+          git clone --depth 1 https://github.com/justinfrankel/WDL.git lib/WDL
+          git clone --depth 1 https://github.com/xiph/opus.git lib/opus
+
+      - name: Build Pico 2 W OLED UF2
+        run: |
+          cmake -S . -B build/pico2w -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DPICO_SDK_PATH="$GITHUB_WORKSPACE/pico-sdk" \
+            -DVERSION="${FIRMWARE_VERSION}"
+          cmake --build build/pico2w --target ds5-bridge
+          mkdir -p artifacts
+          cp build/pico2w/ds5-bridge-oled.uf2 "artifacts/DS5Dongle-by-Ohad-${FIRMWARE_VERSION}-USBMode.uf2"
+
+      - name: Upload UF2 artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: DS5Dongle-by-Ohad-${{ env.FIRMWARE_VERSION }}-USBMode
+          path: artifacts/*.uf2
+          if-no-files-found: error
