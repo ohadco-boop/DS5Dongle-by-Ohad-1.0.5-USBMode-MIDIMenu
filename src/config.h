@@ -80,10 +80,6 @@ struct __attribute__((packed)) Config_body {
     // DS5Dongle by Ohad 1.0.5: OLED UI language. 0=English, 1=Hebrew.
     // English remains the safe default so existing users keep the old UI after upgrade.
     uint8_t ui_language;
-    // DS5Dongle by Ohad 1.0.6: USB mode selected from OLED Settings.
-    // 0=normal DualSense-compatible HID+Audio, 1=USB MIDI only for MA2.
-    // Changing this requires a reboot so TinyUSB re-enumerates with the other descriptor.
-    uint8_t usb_mode;
 };
 
 struct __attribute__((packed)) Config {
@@ -99,8 +95,6 @@ void config_load();
 bool config_save();
 bool config_save_pending();
 bool config_flush_deferred_save_now();
-bool config_save_force_now();
-bool config_usb_midi_mode();
 void config_service_deferred_save();
 const Config_body& get_config();
 void set_config(const uint8_t *new_config, const uint16_t len);

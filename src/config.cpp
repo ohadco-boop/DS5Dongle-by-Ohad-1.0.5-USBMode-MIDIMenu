@@ -15,7 +15,7 @@
 #include "audio.h"
 
 constexpr uint32_t CONFIG_MAGIC = 0x66ccff00;
-constexpr uint16_t CONFIG_VERSION = 8;
+constexpr uint16_t CONFIG_VERSION = 7;
 // Persistent app data must not live in the last two flash sectors: BTstack
 // uses them as its NVM/link-key flash banks on Pico/Pico W ports. The old
 // Ohad builds stored Config in the very last sector, which explains why
@@ -213,10 +213,6 @@ void config_valid() {
         body->ui_language = 0;
         printf("[Config] ui_language invalid, defaulting to English\n");
     }
-    if (body->usb_mode > 1) {
-        body->usb_mode = 0;
-        printf("[Config] usb_mode invalid, defaulting to normal HID+Audio\n");
-    }
     if (body->config_version != CONFIG_VERSION) {
         // DS5Dongle by Ohad 1.0.5 PersistentSettings:
         // Firmware updates must not wipe the user's OLED Settings every time the
@@ -250,12 +246,6 @@ void config_valid() {
                 body->ui_language = 0;
                 printf("[Config] Migrated UI language default English\n");
             }
-            if (previous_body_config_version <= 7) {
-                // DS5Dongle by Ohad 1.0.6: new USB Mode setting. Preserve
-                // normal Gamepad+Audio behavior for existing users.
-                body->usb_mode = 0;
-                printf("[Config] Migrated USB mode default Normal\n");
-            }
 
             body->config_version = CONFIG_VERSION;
             printf("[Config] Preserved user settings while migrating schema %u -> %u\n",
@@ -275,8 +265,7 @@ void config_valid() {
             body->inactive_time = 5;              // fixed65u idle menu default: 5 min
             body->keep_awake_on_audio = 1;        // AudioKeep On
             body->ui_language = 0;                // English
-            body->usb_mode = 0;                   // Normal HID+Audio USB mode
-            printf("[Config] First boot / erased config, applying DS5Dongle by Ohad defaults\n");
+            printf("[Config] First boot / erased config, applying DS5Dongle by Ohad 1.0.5 Stable defaults\n");
         }
     }
 }
@@ -373,16 +362,6 @@ bool config_flush_deferred_save_now() {
     const bool ok = config_write_flash_now();
     if (ok) g_config_save_deferred = false;
     return ok;
-}
-
-bool config_save_force_now() {
-    const bool ok = config_write_flash_now();
-    if (ok) g_config_save_deferred = false;
-    return ok;
-}
-
-bool config_usb_midi_mode() {
-    return config.body.usb_mode == 1;
 }
 
 void config_service_deferred_save() {

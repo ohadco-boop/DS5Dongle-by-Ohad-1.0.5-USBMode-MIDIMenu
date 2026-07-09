@@ -1,8 +1,3 @@
-## USB Mode / MIDI update
-
-- Added OLED Settings USB Mode: Gamepad or MIDI. Saving the setting reboots into the selected USB descriptor.
-- MIDI mode exposes USB MIDI only; no HID gamepad and no USB Audio.
-
 ## 1.0.5
 - Added fast hold-to-scroll for D-Pad Up/Down in Settings and Remap.
 - Settings and Remap scrolling keeps wraparound behavior at the top and bottom.
