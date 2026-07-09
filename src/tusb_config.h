@@ -4,37 +4,69 @@
 extern "C" {
 #endif
 
-// Pico SDK passes CFG_TUSB_MCU on the compiler command line for the selected
-// board. Guard it to avoid redefinition warnings on Pico SDK 2.x.
-#ifndef CFG_TUSB_MCU
-#define CFG_TUSB_MCU                 OPT_MCU_RP2350
+#ifndef ENABLE_SERIAL
+#define ENABLE_SERIAL 0
 #endif
 
-#define CFG_TUSB_OS                  OPT_OS_PICO
-#define CFG_TUSB_RHPORT0_MODE        (OPT_MODE_DEVICE)
+//--------------------------------------------------------------------+
+// Board Specific Configuration
+//--------------------------------------------------------------------+
+#ifndef BOARD_TUD_RHPORT
+#define BOARD_TUD_RHPORT            0
+#endif
+
+#ifndef BOARD_TUD_MAX_SPEED
+#define BOARD_TUD_MAX_SPEED         OPT_MODE_DEFAULT_SPEED
+#endif
+
+//--------------------------------------------------------------------+
+// Common Configuration
+//--------------------------------------------------------------------+
+// Pico SDK normally passes CFG_TUSB_MCU on the compiler command line.
+#ifndef CFG_TUSB_MCU
+#define CFG_TUSB_MCU                OPT_MCU_RP2350
+#endif
+
+#ifndef CFG_TUSB_OS
+#define CFG_TUSB_OS                 OPT_OS_PICO
+#endif
+
+#ifndef CFG_TUSB_DEBUG
+#define CFG_TUSB_DEBUG              0
+#endif
+
+// Enable Device stack explicitly. Without this some TinyUSB builds do not
+// expose the network device class declarations.
+#define CFG_TUD_ENABLED             1
+#define CFG_TUD_MAX_SPEED           BOARD_TUD_MAX_SPEED
+#define CFG_TUSB_RHPORT0_MODE       (OPT_MODE_DEVICE)
 
 #ifndef CFG_TUSB_MEM_SECTION
 #define CFG_TUSB_MEM_SECTION
 #endif
 #ifndef CFG_TUSB_MEM_ALIGN
-#define CFG_TUSB_MEM_ALIGN           __attribute__ ((aligned(4)))
+#define CFG_TUSB_MEM_ALIGN          __attribute__ ((aligned(4)))
 #endif
 
-#define CFG_TUD_ENDPOINT0_SIZE       64
+#define CFG_TUD_ENDPOINT0_SIZE      64
 
-#define CFG_TUD_CDC                  0
-#define CFG_TUD_MSC                  0
-#define CFG_TUD_HID                  0
-#define CFG_TUD_MIDI                 0
-#define CFG_TUD_VENDOR               0
-#define CFG_TUD_AUDIO                0
+//--------------------------------------------------------------------+
+// Device classes: this firmware is USB network only.
+//--------------------------------------------------------------------+
+#define CFG_TUD_CDC                 0
+#define CFG_TUD_MSC                 0
+#define CFG_TUD_HID                 0
+#define CFG_TUD_MIDI                0
+#define CFG_TUD_VENDOR              0
+#define CFG_TUD_AUDIO               0
 
-// TinyUSB 0.20 renamed CFG_TUD_NET to CFG_TUD_ECM_RNDIS.
-// Use the new name so the build does not emit net-class warnings.
-#define CFG_TUD_ECM_RNDIS            1
-#define CFG_TUD_NCM                  0
+// TinyUSB 0.20 name. Do not also define deprecated CFG_TUD_NET.
+#define CFG_TUD_ECM_RNDIS           1
+#define CFG_TUD_NCM                 0
+#define CFG_TUD_NET_MTU             1500
 
-#define CFG_TUD_NET_MTU              1500
+// Full-speed bulk endpoints are 64 bytes on RP2350/Pico 2 W.
+#define CFG_TUD_NET_ENDPOINT_SIZE   64
 
 #ifdef __cplusplus
 }

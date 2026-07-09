@@ -171,10 +171,11 @@ void state_init() {
 }
 
 void state_set(uint8_t *data, const uint8_t size) {
-    if (size > 63) {
+    const uint8_t copy_size = size > sizeof(state) ? (uint8_t)sizeof(state) : size;
+    if (size > sizeof(state)) {
         printf("[StateMgr] Warning: State Set over 63 bytes\n");
     }
-    memcpy(data, state, size);
+    memcpy(data, state, copy_size);
 
     // fixed65w/audio-route:
     // - Default/fallback remains the 65v jack-based reversible route.
