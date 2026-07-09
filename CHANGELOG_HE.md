@@ -139,3 +139,9 @@
 
 ## v1.0.0
 - גרסת בסיס יציבה של DS5Dongle by Ohad עם OLED, Settings, REMAP, PowerCombo, Audio, Diagnostics וסלוטים.
+
+
+## 0.1.1 build fix
+- TinyUSB 0.20 config updated: uses `CFG_TUD_ECM_RNDIS` instead of deprecated `CFG_TUD_NET`.
+- Removed endpoint-size redefinition warning.
+- Guards `CFG_TUSB_MCU` to avoid Pico SDK command-line redefinition.

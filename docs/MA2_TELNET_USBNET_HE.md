@@ -87,3 +87,9 @@ Speed 2/3 boundary
 זו גרסת מקור ניסיונית ל-GitHub Actions. היא מיועדת ל-Pico 2 W רגיל, לא Plus, ובגלל שהורדנו אודיו/גיימפד/מידי היא אמורה להיות הרבה יותר קלה בזיכרון מהדונגל המלא.
 
 אם Windows לא מזהה את ההתקן כרשת, ייתכן שצריך לבחור/להתקין RNDIS driver ידנית במנהל ההתקנים.
+
+
+## 0.1.1 build fix
+- TinyUSB 0.20 config updated: uses `CFG_TUD_ECM_RNDIS` instead of deprecated `CFG_TUD_NET`.
+- Removed endpoint-size redefinition warning.
+- Guards `CFG_TUSB_MCU` to avoid Pico SDK command-line redefinition.

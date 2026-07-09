@@ -3,7 +3,7 @@
 
 #define USB_VID 0xCafe
 #define USB_PID 0x4020
-#define USB_BCD 0x0100
+#define USB_BCD 0x0101
 
 enum {
     ITF_NUM_NET_CTRL = 0,
@@ -46,7 +46,7 @@ extern "C" uint8_t const* tud_descriptor_device_cb(void) { return (uint8_t const
 
 uint8_t const desc_configuration[] = {
     TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
-    TUD_RNDIS_DESCRIPTOR(ITF_NUM_NET_CTRL, STRID_INTERFACE, EPNUM_NET_NOTIF, 64, EPNUM_NET_OUT, EPNUM_NET_IN, CFG_TUD_NET_ENDPOINT_SIZE),
+    TUD_RNDIS_DESCRIPTOR(ITF_NUM_NET_CTRL, STRID_INTERFACE, EPNUM_NET_NOTIF, 64, EPNUM_NET_OUT, EPNUM_NET_IN, 64),
 };
 
 extern "C" uint8_t const* tud_descriptor_configuration_cb(uint8_t index) {
