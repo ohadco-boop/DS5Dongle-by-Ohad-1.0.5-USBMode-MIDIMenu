@@ -1,3 +1,7 @@
+# v0.2.8
+- Actually fixed the dimmer command in code: `Attribute "Dim"` is now sent instead of `Attribute "Dimmer"`.
+- No settings layout change; existing saved settings should remain valid.
+
 # v0.2.7
 - Fixed MA2 dimmer attribute command to use `Attribute "Dim"` instead of `Attribute "Dimmer"`.
 

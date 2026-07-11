@@ -342,8 +342,8 @@ void maybe_send_dir(uint8_t dir, uint8_t speed) {
             case 1: std::snprintf(cmd, sizeof(cmd), "Attribute \"Pan\" At + %s If Selection", step); break;
             case 2: std::snprintf(cmd, sizeof(cmd), "Attribute \"Tilt\" At + %s If Selection", step); break;
             case 3: std::snprintf(cmd, sizeof(cmd), "Attribute \"Tilt\" At - %s If Selection", step); break;
-            case 4: std::snprintf(cmd, sizeof(cmd), "Attribute \"Dimmer\" At + %s If Selection", step); break;
-            default: std::snprintf(cmd, sizeof(cmd), "Attribute \"Dimmer\" At - %s If Selection", step); break;
+            case 4: std::snprintf(cmd, sizeof(cmd), "Attribute \"Dim\" At + %s If Selection", step); break;
+            default: std::snprintf(cmd, sizeof(cmd), "Attribute \"Dim\" At - %s If Selection", step); break;
         }
         ma2_telnet_send_command(cmd);
         g_last_dir_send_us[dir] = now;

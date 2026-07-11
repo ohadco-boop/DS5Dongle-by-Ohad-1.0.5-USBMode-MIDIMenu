@@ -1,4 +1,4 @@
-## v0.2.6
+## v0.2.8
 
 - תיקון מיפוי D-Pad במצב עבודה רגיל: Right = `Next`, Left = `Previous`, Up = `Key Up`, Down = `Key Down`.
 - מצב הגדרות נשאר כמו קודם: Mute דולק, D-Pad עורך, Triangle שומר.

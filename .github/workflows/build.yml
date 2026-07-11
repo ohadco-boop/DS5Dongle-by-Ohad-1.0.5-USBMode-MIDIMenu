@@ -1,7 +1,7 @@
 name: Build MA2 Telnet USBNet UF2
 
 env:
-  FIRMWARE_VERSION: 0.2.7
+  FIRMWARE_VERSION: 0.2.8
 
 on:
   push:
