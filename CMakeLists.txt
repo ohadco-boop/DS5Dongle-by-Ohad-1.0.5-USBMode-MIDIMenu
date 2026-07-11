@@ -38,13 +38,30 @@ add_executable(ds5-ma2-telnet-usbnet
   src/ram_mem.c
 )
 
-set(VERSION "0.1.5" CACHE STRING "Program version string")
+set(VERSION "0.1.6" CACHE STRING "Program version string")
 string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" VERSION_SHORT "${VERSION}")
 if(NOT VERSION_SHORT)
   set(VERSION_SHORT "${VERSION}")
 endif()
 
 target_include_directories(ds5-ma2-telnet-usbnet PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+# TinyUSB RNDIS/ECM network class needs the helper files from lib/networking.
+# Pico SDK 2.2.0 + TinyUSB 0.20.0 compiles ecm_rndis_device.c, which includes
+# rndis_protocol.h from this folder and expects rndis_reports.c to provide
+# rndis_class_set_handler(). Without this, GitHub Actions fails with:
+#   fatal error: rndis_protocol.h: No such file or directory
+set(TINYUSB_NETWORKING_DIR "${PICO_SDK_PATH}/lib/tinyusb/lib/networking")
+if(EXISTS "${TINYUSB_NETWORKING_DIR}/rndis_reports.c")
+  target_sources(ds5-ma2-telnet-usbnet PRIVATE
+    "${TINYUSB_NETWORKING_DIR}/rndis_reports.c"
+  )
+  target_include_directories(ds5-ma2-telnet-usbnet PRIVATE
+    "${TINYUSB_NETWORKING_DIR}"
+  )
+else()
+  message(FATAL_ERROR "TinyUSB networking helpers not found: ${TINYUSB_NETWORKING_DIR}")
+endif()
 
 target_compile_definitions(ds5-ma2-telnet-usbnet PRIVATE
   FIRMWARE_VERSION="${VERSION}"

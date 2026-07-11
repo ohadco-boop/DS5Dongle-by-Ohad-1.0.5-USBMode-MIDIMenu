@@ -1,4 +1,8 @@
 
+## 0.1.6
+- Build fix: add TinyUSB lib/networking include path and rndis_reports.c for USB RNDIS/ECM.
+
+
 
 ## v0.1.5 buildfix
 - Fixed TinyUSB 0.20 network API: tud_network_xmit() is void, readiness is checked via tud_network_can_xmit().
