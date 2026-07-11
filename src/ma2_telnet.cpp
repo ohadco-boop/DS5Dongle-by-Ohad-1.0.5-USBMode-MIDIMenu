@@ -311,7 +311,8 @@ void ma2_telnet_tick() {
 
 void ma2_telnet_reconfigure() { close_conn(); g_next_connect_us = time_us_32() + 300000; }
 
-bool ma2_telnet_is_ready() { return g_connected && g_logged_in; }
+bool ma2_telnet_connected() { return g_connected; }
+bool ma2_telnet_logged_in() { return g_connected && g_logged_in; }
 const char* ma2_telnet_status() { return g_status; }
 
 void ma2_telnet_send_command(const char* cmd) {
@@ -333,4 +334,24 @@ void ma2_telnet_drive_right_stick(int x, int y) {
     else if (x > 0) maybe_send_dir(1, sx);
     if (y < 0) maybe_send_dir(2, sy);
     else if (y > 0) maybe_send_dir(3, sy);
+}
+
+
+void ma2_remote_process_report(const uint8_t report[63]) {
+    if (!report) return;
+    // USB-style DualSense input report: bytes 2/3 are right-stick X/Y.
+    // Convert 0..255 center-at-128 to signed -127..127.
+    int x = (int)report[2] - 128;
+    int y = (int)report[3] - 128;
+    if (x < -127) x = -127;
+    if (x > 127) x = 127;
+    if (y < -127) y = -127;
+    if (y > 127) y = 127;
+    ma2_telnet_drive_right_stick(x, y);
+}
+
+void ma2_remote_tick() {
+    // Right-stick repeat timing is handled in ma2_remote_process_report()
+    // using the latest incoming controller reports, so no background work is
+    // needed here yet. Kept as a public hook for main.cpp.
 }

@@ -1,4 +1,9 @@
 
+## v0.2.1
+- Build fix: added the missing public MA2 Telnet status and remote-control wrappers used by main/OLED.
+- Right-stick report parser now calls the Telnet Pan/Tilt drive function from the exported ma2_remote_process_report() hook.
+
+
 
 ## v0.2.0 buildfix
 - Fixed TinyUSB 0.20 network API: tud_network_xmit() is void, readiness is checked via tud_network_can_xmit().

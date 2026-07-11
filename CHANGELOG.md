@@ -1,3 +1,8 @@
+
+## v0.2.1
+- Build fix: added the missing public MA2 Telnet status and remote-control wrappers used by main/OLED.
+- Right-stick report parser now calls the Telnet Pan/Tilt drive function from the exported ma2_remote_process_report() hook.
+
 ## v0.2.0
 - OLED fix: restore original framebuffer bit order to prevent scrambled/mirrored display output.
 
