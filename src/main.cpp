@@ -57,11 +57,10 @@ int main() {
     set_sys_clock_khz(SYS_CLOCK_KHZ, true);
 
     board_init();
-    tusb_rhport_init_t dev_init = {
-        .role = TUSB_ROLE_DEVICE,
-        .speed = TUSB_SPEED_FULL
-    };
-    tusb_init(BOARD_TUD_RHPORT, &dev_init);
+    // Use the legacy no-argument TinyUSB init for Pico SDK compatibility.
+    // The rhport/speed version depends on TinyUSB API details and broke builds
+    // on the GitHub Actions Pico SDK/TinyUSB combination.
+    tusb_init();
     board_init_after_tusb();
 
     stdio_uart_init_full(uart0, 115200, 0, 1);

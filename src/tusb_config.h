@@ -65,8 +65,9 @@ extern "C" {
 #define CFG_TUD_NCM                 0
 #define CFG_TUD_NET_MTU             1500
 
-// Full-speed bulk endpoints are 64 bytes on RP2350/Pico 2 W.
-#define CFG_TUD_NET_ENDPOINT_SIZE   64
+// Do not define CFG_TUD_NET_ENDPOINT_SIZE here. TinyUSB net_device.h defines it
+// internally; defining it in user config creates a redefinition warning/failure
+// with Pico SDK 2.2.0 + TinyUSB 0.20.0.
 
 #ifdef __cplusplus
 }

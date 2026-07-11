@@ -1,3 +1,13 @@
+## 0.1.4 - buildfix4
+- Fixed TinyUSB network MAC symbol type to match TinyUSB 0.20 (`uint8_t tud_network_mac_address[6]`, not const).
+- Kept USB network endpoint size undefined in user config to avoid redefinition with TinyUSB net_device.h.
+
+# Changelog
+
+## 0.1.4
+- Build fix: use no-argument `tusb_init()` for Pico SDK/TinyUSB compatibility.
+- Build fix: stop defining `CFG_TUD_NET_ENDPOINT_SIZE`; TinyUSB defines it internally.
+
 ## 1.0.5
 - Added fast hold-to-scroll for D-Pad Up/Down in Settings and Remap.
 - Settings and Remap scrolling keeps wraparound behavior at the top and bottom.

@@ -1,3 +1,13 @@
+## 0.1.4 - תיקון build נוסף
+- תוקן טיפוס סמל ה-MAC של TinyUSB ל-`uint8_t tud_network_mac_address[6]` בלי const, כדי להתאים ל-TinyUSB 0.20.
+- נשאר בלי הגדרת `CFG_TUD_NET_ENDPOINT_SIZE` בקונפיג, כדי למנוע redefinition מול net_device.h.
+
+# יומן שינויים
+
+## 0.1.4
+- תיקון קומפילציה: מעבר ל־`tusb_init()` ללא פרמטרים בשביל תאימות Pico SDK/TinyUSB.
+- תיקון קומפילציה: הסרת `CFG_TUD_NET_ENDPOINT_SIZE` כי TinyUSB מגדיר אותו לבד.
+
 ## 1.0.5
 - נוספה גלילה מהירה בלחיצה רצופה על D-Pad למעלה/למטה גם בתפריטי Settings ו־Remap.
 - הגלילה ב־Settings וב־Remap נשארת בלופ מהסוף להתחלה ומההתחלה לסוף.
