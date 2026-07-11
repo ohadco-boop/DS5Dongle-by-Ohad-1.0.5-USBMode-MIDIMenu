@@ -31,8 +31,8 @@ Ma2TelnetSettings telnet_settings_default() {
     s.deadzone_percent = 5;
     s.speed1_percent = 35;
     s.speed2_percent = 70;
-    std::strncpy(s.username, "administrator", sizeof(s.username) - 1);
-    s.password[0] = '\0';
+    std::strncpy(s.username, "Administrator", sizeof(s.username) - 1);
+    std::strncpy(s.password, "admin", sizeof(s.password) - 1);
     return s;
 }
 

@@ -1,4 +1,4 @@
-## v0.1.9 buildfix7
+## v0.2.0 buildfix7
 - תיקון שגיאת linker של TinyUSB סביב `tud_network_mac_address` על ידי שמירת הסימבול כגלובלי עם C linkage.
 
 
