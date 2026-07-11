@@ -1,3 +1,8 @@
+
+
+## v0.1.5 buildfix
+- Fixed TinyUSB 0.20 network API: tud_network_xmit() is void, readiness is checked via tud_network_can_xmit().
+- Fixed MAC address definition warning.
 # DS5 MA2 Telnet USBNet
 
 Firmware נקי ל-Pico 2 W: השלט DualSense מתחבר ל-Pico ב-Bluetooth, וה-Pico מזדהה למחשב כהתקן רשת USB ושולח פקודות Telnet ל-grandMA2.

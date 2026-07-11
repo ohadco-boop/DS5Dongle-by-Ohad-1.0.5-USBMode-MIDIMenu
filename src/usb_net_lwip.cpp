@@ -23,7 +23,11 @@ void make_ip(ip4_addr_t* out, const uint8_t ip[4]) {
 err_t usb_linkoutput(netif*, pbuf* p) {
     if (!tud_ready()) return ERR_CONN;
     if (!tud_network_can_xmit((uint16_t)p->tot_len)) return ERR_USE;
-    return tud_network_xmit(p, (uint16_t)p->tot_len) ? ERR_OK : ERR_IF;
+
+    // TinyUSB 0.20 tud_network_xmit() returns void.
+    // can_xmit() above is the readiness check.
+    tud_network_xmit(p, (uint16_t)p->tot_len);
+    return ERR_OK;
 }
 
 err_t usb_netif_init(netif* n) {
@@ -42,7 +46,9 @@ err_t usb_netif_init(netif* n) {
 }
 
 // Locally administered MAC. Keep stable so Windows does not create a new network every boot.
-extern "C" uint8_t tud_network_mac_address[6] = {0x02, 0xD5, 0xA2, 0x00, 0x07, 0x02};
+extern "C" {
+uint8_t tud_network_mac_address[6] = {0x02, 0xD5, 0xA2, 0x00, 0x07, 0x02};
+}
 
 void usb_net_lwip_init() {
     // pico_cyw43_arch_lwip_poll initializes lwIP inside cyw43_arch_init().

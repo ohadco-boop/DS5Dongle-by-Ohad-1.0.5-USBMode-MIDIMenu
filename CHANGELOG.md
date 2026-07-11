@@ -1,3 +1,8 @@
+
+
+## v0.1.5 buildfix
+- Fixed TinyUSB 0.20 network API: tud_network_xmit() is void, readiness is checked via tud_network_can_xmit().
+- Fixed MAC address definition warning.
 ## 0.1.4 - buildfix4
 - Fixed TinyUSB network MAC symbol type to match TinyUSB 0.20 (`uint8_t tud_network_mac_address[6]`, not const).
 - Kept USB network endpoint size undefined in user config to avoid redefinition with TinyUSB net_device.h.
