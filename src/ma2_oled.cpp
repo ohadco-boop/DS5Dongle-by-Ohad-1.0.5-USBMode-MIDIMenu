@@ -103,8 +103,12 @@ void fb_clear() { std::memset(fb, 0, sizeof(fb)); }
 
 void pix(int x, int y, bool on = true) {
     if (x < 0 || x >= kW || y < 0 || y >= kH) return;
+    // Match the proven framebuffer bit order from the original OLED firmware.
+    // The SH1107 flush path reverses each byte before sending it, so pixels
+    // must be stored MSB-first in the framebuffer. Using LSB-first here makes
+    // the whole screen look scrambled/mirrored.
     uint8_t& b = fb[y * kRowBytes + (x >> 3)];
-    uint8_t m = 1u << (x & 7);
+    uint8_t m = (uint8_t)(1u << (7 - (x & 7)));
     if (on) b |= m; else b &= (uint8_t)~m;
 }
 
