@@ -4,6 +4,7 @@
 #include "ma2_telnet.h"
 #include "telnet_settings.h"
 #include "usb_net_lwip.h"
+#include "state_mgr.h"
 #include <cstdio>
 #include <cstring>
 #include "hardware/spi.h"
@@ -41,6 +42,8 @@ constexpr uint32_t kLongUs = 900000;
 
 uint8_t pad_prev = 8;
 bool tri_prev = false;
+bool mute_prev = false;
+bool settings_mode = false;
 uint32_t pad_first_us = 0;
 uint32_t pad_last_repeat_us = 0;
 uint8_t pad_repeat_dir = 8;
@@ -55,7 +58,13 @@ constexpr int FIELD_PASS0 = 23;
 constexpr int FIELD_DEADZONE = 38;
 constexpr int FIELD_SPEED1 = 39;
 constexpr int FIELD_SPEED2 = 40;
-constexpr int FIELD_TOTAL = 41;
+constexpr int FIELD_STEP1 = 41;
+constexpr int FIELD_STEP2 = 42;
+constexpr int FIELD_STEP3 = 43;
+constexpr int FIELD_RATE1 = 44;
+constexpr int FIELD_RATE2 = 45;
+constexpr int FIELD_RATE3 = 46;
+constexpr int FIELD_TOTAL = 47;
 
 const char* kChars = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-@!#";
 
@@ -153,6 +162,11 @@ int char_index(char c) {
     return p ? (int)(p - kChars) : 0;
 }
 
+void format_step_text(uint16_t x10, char* out, size_t out_len) {
+    if (x10 % 10 == 0) std::snprintf(out, out_len, "%u", (unsigned)(x10 / 10));
+    else std::snprintf(out, out_len, "%u.%u", (unsigned)(x10 / 10), (unsigned)(x10 % 10));
+}
+
 void normalize_string(char s[16]) {
     s[15] = 0;
     for (int i = 14; i >= 0; --i) {
@@ -211,6 +225,18 @@ void change_field_value(int delta) {
         if (v < min_v) v = 95;
         if (v > 95) v = min_v;
         s.speed2_percent = (uint8_t)v;
+    } else if (field >= FIELD_STEP1 && field <= FIELD_STEP3) {
+        const int idx = field - FIELD_STEP1;
+        int v = (int)s.step_x10[idx] + delta;
+        if (v < 1) v = 200;
+        if (v > 200) v = 1;
+        s.step_x10[idx] = (uint16_t)v;
+    } else if (field >= FIELD_RATE1 && field <= FIELD_RATE3) {
+        const int idx = field - FIELD_RATE1;
+        int v = (int)s.rate_ms[idx] + delta * 5;
+        if (v < 20) v = 500;
+        if (v > 500) v = 20;
+        s.rate_ms[idx] = (uint16_t)v;
     }
     telnet_settings_set(s);
     last_render_us = 0;
@@ -278,8 +304,14 @@ void field_label(char* out, size_t out_len) {
     else if (field >= FIELD_USER0 && field < FIELD_USER0 + 15) std::snprintf(out, out_len, "User char %02d", field - FIELD_USER0);
     else if (field >= FIELD_PASS0 && field < FIELD_PASS0 + 15) std::snprintf(out, out_len, "Pass char %02d", field - FIELD_PASS0);
     else if (field == FIELD_DEADZONE) std::snprintf(out, out_len, "Deadzone");
-    else if (field == FIELD_SPEED1) std::snprintf(out, out_len, "Speed 1/2");
-    else std::snprintf(out, out_len, "Speed 2/3");
+    else if (field == FIELD_SPEED1) std::snprintf(out, out_len, "Zone 1/2 edge");
+    else if (field == FIELD_SPEED2) std::snprintf(out, out_len, "Zone 2/3 edge");
+    else if (field == FIELD_STEP1) std::snprintf(out, out_len, "Zone 1 step");
+    else if (field == FIELD_STEP2) std::snprintf(out, out_len, "Zone 2 step");
+    else if (field == FIELD_STEP3) std::snprintf(out, out_len, "Zone 3 step");
+    else if (field == FIELD_RATE1) std::snprintf(out, out_len, "Zone 1 rate");
+    else if (field == FIELD_RATE2) std::snprintf(out, out_len, "Zone 2 rate");
+    else std::snprintf(out, out_len, "Zone 3 rate");
 }
 
 void current_value_text(char* out, size_t out_len) {
@@ -295,9 +327,17 @@ void current_value_text(char* out, size_t out_len) {
     } else if (field == FIELD_DEADZONE) {
         std::snprintf(out, out_len, "Deadzone:%u%%", s.deadzone_percent);
     } else if (field == FIELD_SPEED1) {
-        std::snprintf(out, out_len, "S1/S2 at:%u%%", s.speed1_percent);
+        std::snprintf(out, out_len, "Z1/Z2 at:%u%%", s.speed1_percent);
+    } else if (field == FIELD_SPEED2) {
+        std::snprintf(out, out_len, "Z2/Z3 at:%u%%", s.speed2_percent);
+    } else if (field >= FIELD_STEP1 && field <= FIELD_STEP3) {
+        char st[12];
+        const int idx = field - FIELD_STEP1;
+        format_step_text(s.step_x10[idx], st, sizeof(st));
+        std::snprintf(out, out_len, "Step %d:%s", idx + 1, st);
     } else {
-        std::snprintf(out, out_len, "S2/S3 at:%u%%", s.speed2_percent);
+        const int idx = field - FIELD_RATE1;
+        std::snprintf(out, out_len, "Rate %d:%ums", idx + 1, s.rate_ms[idx]);
     }
 }
 
@@ -314,7 +354,7 @@ void draw_edit_cursor() {
     } else if (field >= FIELD_PASS0 && field < FIELD_PASS0 + 15) {
         x = 5 * 6 + (field - FIELD_PASS0) * 6;
     }
-    if (x >= 0 && x < kW - 5) for (int i = 0; i < 5; ++i) pix(x + i, 45);
+    if (x >= 0 && x < kW - 5) for (int i = 0; i < 5; ++i) pix(x + i, 55);
 }
 
 void render() {
@@ -334,17 +374,27 @@ void render() {
     text(0, 9, line);
     text(0, 18, ma2_telnet_status());
 
+    if (!settings_mode) {
+        text(0, 29, "MODE: MA2 NAV");
+        text(0, 38, "Mute: settings ON");
+        text(0, 49, "Dpad->MA2 arrows");
+        text(0, 57, "RStick Pan/Tilt");
+        flush();
+        return;
+    }
+
+    text(0, 29, "MODE: SETTINGS");
+
     char lbl[28];
     field_label(lbl, sizeof(lbl));
-    text(0, 29, lbl);
+    text(0, 38, lbl);
 
     char val[40];
     current_value_text(val, sizeof(val));
-    text(0, 38, val);
+    text(0, 48, val);
     draw_edit_cursor();
 
-    text(0, 49, "Up/Dn field L/R edit");
-    text(0, 57, "Triangle save");
+    text(0, 57, "Dpad edit  Tri save");
     flush();
 }
 
@@ -385,10 +435,27 @@ void controller_nav_event(uint8_t dpad, bool triangle) {
 
 void oled_handle_controller_report(const uint8_t report[63]) {
     if (!report) return;
+
+    const bool mute = (report[9] & 0x04) != 0;
+    if (mute && !mute_prev) {
+        settings_mode = !settings_mode;
+        state_set_mute_light(settings_mode);
+        state_push_current_to_controller();
+        oled_show_message(settings_mode ? "SETTINGS MODE" : "MA2 NAV MODE", 800);
+        pad_prev = 8;
+        pad_repeat_dir = 8;
+        tri_prev = false;
+    }
+    mute_prev = mute;
+
+    if (!settings_mode) return;
+
     const uint8_t dpad = report[7] & 0x0F;
     const bool triangle = (report[7] & 0x80) != 0;
     controller_nav_event(dpad, triangle);
 }
+
+bool oled_settings_mode_active() { return settings_mode; }
 
 void oled_show_message(const char *msg, uint32_t duration_ms) {
     std::snprintf(popup_msg, sizeof(popup_msg), "%s", msg ? msg : "");

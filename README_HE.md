@@ -1,3 +1,23 @@
+## v0.2.5
+
+- תיקון מיפוי D-Pad במצב עבודה רגיל: Right = `Next`, Left = `Previous`, Up = `Key Up`, Down = `Key Down`.
+- מצב הגדרות נשאר כמו קודם: Mute דולק, D-Pad עורך, Triangle שומר.
+
+## v0.2.4
+
+- מבוסס על v0.2.3.
+- במצב עבודה רגיל, כשה-Mute כבוי: D-Pad שולח `Next` / `Previous` ל-MA2 במקום `Key Up/Down/Left/Right`.
+- Right/Down = `Next`, Left/Up = `Previous`.
+- מצב עריכת הגדרות נשאר עם Mute דולק: D-Pad עורך, Triangle שומר.
+
+## v0.2.3
+
+- מבוסס על v0.2.1 העובד.
+- נוספו Step נפרד לכל Zone בטווח 0.1-20.
+- נוסף Rate נפרד לכל Zone במילישניות.
+- כפתור Mute בשלט עושה Toggle למצב עריכת הגדרות. כשהאור הכתום דולק: D-Pad/Triangle עורכים ושומרים הגדרות. ב-v0.2.3 כשהאור כבוי D-Pad שלח Key Up/Down/Left/Right ל-MA2; ב-v0.2.4 זה הוחלף ל-Next/Previous.
+- Right Stick נשאר Pan/Tilt בלבד.
+
 
 ## v0.2.1
 - Build fix: added the missing public MA2 Telnet status and remote-control wrappers used by main/OLED.

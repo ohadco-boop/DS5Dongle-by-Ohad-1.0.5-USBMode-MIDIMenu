@@ -9,6 +9,7 @@
 #include "state_mgr.h"
 #include "config.h"
 #include "oled.h"
+#include "bt.h"
 
 // Set by the OLED lightbar service (src/oled.cpp). While true, the firmware
 // owns the lightbar (an OLED mode or the charging pulse) and the host's
@@ -160,14 +161,24 @@ void state_set_mute_light(bool muted) {
 
 static void state_apply_pico_mic_mute_light(uint8_t *data, const uint8_t size) {
     if (size <= offsetof(SetStateData, MuteLightMode)) return;
-    // The Pico owns the mute LED: ON means the Pico BT mic path is disabled.
+    // MA2-Telnet firmware owns the mute LED. ON means Pico settings mode.
     data[1] |= 0x01;
-    data[offsetof(SetStateData, MuteLightMode)] = get_config().bt_mic_enable ? MuteLight::Off : MuteLight::On;
+    data[offsetof(SetStateData, MuteLightMode)] = state[offsetof(SetStateData, MuteLightMode)];
 }
 
 void state_init() {
     memcpy(state, state_init_data, sizeof(state));
-    state_set_mute_light(!get_config().bt_mic_enable);
+    state_set_mute_light(false);
+}
+
+void state_push_current_to_controller() {
+    uint8_t report32[142]{};
+    report32[0] = 0x32;
+    report32[1] = 0x10;
+    report32[2] = 0x10 | 0 << 6 | 1 << 7;
+    report32[3] = 0x3f;
+    state_set(report32 + 4, sizeof(SetStateData));
+    bt_write(report32, sizeof(report32));
 }
 
 void state_set(uint8_t *data, const uint8_t size) {

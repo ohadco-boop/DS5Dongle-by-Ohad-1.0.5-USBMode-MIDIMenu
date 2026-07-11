@@ -5,7 +5,7 @@
 #include "pico/stdlib.h"
 
 namespace {
-constexpr uint32_t kMagic = 0x4D413255; // "MA2U"
+constexpr uint32_t kMagic = 0x4D413257; // "MA2W" / v0.2.3 settings layout
 // Dedicated sector. Kept away from BTstack NVM and original DS5 config area.
 constexpr uint32_t kFlashOffset = PICO_FLASH_SIZE_BYTES - 7u * FLASH_SECTOR_SIZE;
 Ma2TelnetSettings g_settings{};
@@ -16,6 +16,10 @@ bool sane(const Ma2TelnetSettings& s) {
     if (s.deadzone_percent > 30) return false;
     if (s.speed1_percent < 10 || s.speed1_percent > 80) return false;
     if (s.speed2_percent < s.speed1_percent || s.speed2_percent > 95) return false;
+    for (int i = 0; i < 3; ++i) {
+        if (s.step_x10[i] < 1 || s.step_x10[i] > 200) return false;
+        if (s.rate_ms[i] < 20 || s.rate_ms[i] > 500) return false;
+    }
     return true;
 }
 }
@@ -31,6 +35,12 @@ Ma2TelnetSettings telnet_settings_default() {
     s.deadzone_percent = 5;
     s.speed1_percent = 35;
     s.speed2_percent = 70;
+    s.step_x10[0] = 10;   // 1.0
+    s.step_x10[1] = 30;   // 3.0
+    s.step_x10[2] = 100;  // 10.0
+    s.rate_ms[0] = 120;
+    s.rate_ms[1] = 70;
+    s.rate_ms[2] = 40;
     std::strncpy(s.username, "Administrator", sizeof(s.username) - 1);
     std::strncpy(s.password, "admin", sizeof(s.password) - 1);
     return s;

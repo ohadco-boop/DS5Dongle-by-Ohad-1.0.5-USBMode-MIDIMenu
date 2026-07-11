@@ -11,6 +11,8 @@ struct Ma2TelnetSettings {
     uint8_t deadzone_percent;
     uint8_t speed1_percent; // speed 1/2 boundary
     uint8_t speed2_percent; // speed 2/3 boundary
+    uint16_t step_x10[3];   // Pan/Tilt step per zone, fixed point: 1 = 0.1, 200 = 20.0
+    uint16_t rate_ms[3];    // repeat rate per zone in milliseconds
     char username[16];      // default administrator
     char password[16];      // default empty
 };

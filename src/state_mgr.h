@@ -14,6 +14,7 @@ void state_clear_host_audio_route();
 // Ohad fixed43: controller Mute button LED mirrors Pico BT-mic setting.
 // muted=true => orange mute LED ON (Pico mic off), muted=false => LED OFF.
 void state_set_mute_light(bool muted);
+void state_push_current_to_controller();
 void state_update(const uint8_t *data, const uint8_t size);
 
 // Host-controlled DualSense audio routing helper. Returns the Bluetooth audio

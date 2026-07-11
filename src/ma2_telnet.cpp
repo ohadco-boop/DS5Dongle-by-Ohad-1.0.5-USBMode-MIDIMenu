@@ -1,5 +1,6 @@
 #include "ma2_telnet.h"
 #include "telnet_settings.h"
+#include "oled.h"
 #include "lwip/tcp.h"
 #include "lwip/ip4_addr.h"
 #include "pico/time.h"
@@ -19,6 +20,10 @@ char g_status[32] = "TELNET idle";
 
 uint32_t g_last_dir_send_us[4] = {0, 0, 0, 0};
 uint8_t g_last_dir_speed[4] = {0, 0, 0, 0};
+uint8_t g_nav_prev_dpad = 8;
+uint8_t g_nav_repeat_dir = 8;
+uint32_t g_nav_first_us = 0;
+uint32_t g_nav_last_us = 0;
 
 constexpr uint32_t kRetryUs = 2000000;
 constexpr uint32_t kLoginDelayUs = 250000;
@@ -256,21 +261,21 @@ uint8_t speed_for_abs(int v) {
 }
 
 uint32_t interval_for_speed(uint8_t speed) {
-    switch (speed) {
-        case 1: return 120000;
-        case 2: return 70000;
-        case 3: return 40000;
-        default: return 0xFFFFFFFFu;
-    }
+    if (speed < 1 || speed > 3) return 0xFFFFFFFFu;
+    const auto& s = telnet_settings_get();
+    return (uint32_t)s.rate_ms[speed - 1] * 1000u;
 }
 
-int step_for_speed(uint8_t speed) {
-    switch (speed) {
-        case 1: return 1;
-        case 2: return 3;
-        case 3: return 10;
-        default: return 0;
-    }
+uint16_t step_x10_for_speed(uint8_t speed) {
+    if (speed < 1 || speed > 3) return 0;
+    const auto& s = telnet_settings_get();
+    return s.step_x10[speed - 1];
+}
+
+void format_step(uint16_t x10, char* out, size_t out_sz) {
+    if (!out || out_sz == 0) return;
+    if (x10 % 10 == 0) std::snprintf(out, out_sz, "%u", (unsigned)(x10 / 10));
+    else std::snprintf(out, out_sz, "%u.%u", (unsigned)(x10 / 10), (unsigned)(x10 % 10));
 }
 
 void maybe_send_dir(uint8_t dir, uint8_t speed) {
@@ -278,13 +283,14 @@ void maybe_send_dir(uint8_t dir, uint8_t speed) {
     const uint32_t now = time_us_32();
     const uint32_t gap = interval_for_speed(speed);
     if (g_last_dir_speed[dir] != speed || g_last_dir_send_us[dir] == 0 || (uint32_t)(now - g_last_dir_send_us[dir]) >= gap) {
-        const int step = step_for_speed(speed);
-        char cmd[88];
+        char step[12];
+        format_step(step_x10_for_speed(speed), step, sizeof(step));
+        char cmd[96];
         switch (dir) {
-            case 0: std::snprintf(cmd, sizeof(cmd), "Attribute \"Pan\" At - %d If Selection", step); break;
-            case 1: std::snprintf(cmd, sizeof(cmd), "Attribute \"Pan\" At + %d If Selection", step); break;
-            case 2: std::snprintf(cmd, sizeof(cmd), "Attribute \"Tilt\" At + %d If Selection", step); break;
-            default: std::snprintf(cmd, sizeof(cmd), "Attribute \"Tilt\" At - %d If Selection", step); break;
+            case 0: std::snprintf(cmd, sizeof(cmd), "Attribute \"Pan\" At - %s If Selection", step); break;
+            case 1: std::snprintf(cmd, sizeof(cmd), "Attribute \"Pan\" At + %s If Selection", step); break;
+            case 2: std::snprintf(cmd, sizeof(cmd), "Attribute \"Tilt\" At + %s If Selection", step); break;
+            default: std::snprintf(cmd, sizeof(cmd), "Attribute \"Tilt\" At - %s If Selection", step); break;
         }
         ma2_telnet_send_command(cmd);
         g_last_dir_send_us[dir] = now;
@@ -326,6 +332,53 @@ void ma2_telnet_send_command(const char* cmd) {
     set_status("TELNET cmd");
 }
 
+
+void reset_nav_repeat() {
+    g_nav_prev_dpad = 8;
+    g_nav_repeat_dir = 8;
+    g_nav_first_us = 0;
+    g_nav_last_us = 0;
+}
+
+void send_dpad_nav_cmd(uint8_t dpad) {
+    // Normal/live mode:
+    // Right/Left move MA2 selection with Next/Previous.
+    // Up/Down stay as MA2 key navigation.
+    switch (dpad) {
+        case 0: ma2_telnet_send_command("Key Up"); break;
+        case 2: ma2_telnet_send_command("Next"); break;
+        case 4: ma2_telnet_send_command("Key Down"); break;
+        case 6: ma2_telnet_send_command("Previous"); break;
+        default: break;
+    }
+}
+
+void process_dpad_nav(uint8_t dpad) {
+    constexpr uint32_t kHoldDelayUs = 350000;
+    constexpr uint32_t kRepeatUs = 90000;
+    const uint32_t now = time_us_32();
+    const bool is_cardinal = (dpad == 0 || dpad == 2 || dpad == 4 || dpad == 6);
+
+    if (!is_cardinal) {
+        reset_nav_repeat();
+        return;
+    }
+
+    if (dpad != g_nav_prev_dpad) {
+        send_dpad_nav_cmd(dpad);
+        g_nav_first_us = now;
+        g_nav_last_us = now;
+        g_nav_repeat_dir = dpad;
+    } else if (dpad == g_nav_repeat_dir) {
+        if ((uint32_t)(now - g_nav_first_us) >= kHoldDelayUs &&
+            (uint32_t)(now - g_nav_last_us) >= kRepeatUs) {
+            send_dpad_nav_cmd(dpad);
+            g_nav_last_us = now;
+        }
+    }
+    g_nav_prev_dpad = dpad;
+}
+
 void ma2_telnet_drive_right_stick(int x, int y) {
     // x/y expected -127..127. X controls Pan. Negative Y is stick up.
     uint8_t sx = speed_for_abs(x < 0 ? -x : x);
@@ -348,6 +401,10 @@ void ma2_remote_process_report(const uint8_t report[63]) {
     if (y < -127) y = -127;
     if (y > 127) y = 127;
     ma2_telnet_drive_right_stick(x, y);
+
+    const uint8_t dpad = report[7] & 0x0F;
+    if (oled_settings_mode_active()) reset_nav_repeat();
+    else process_dpad_nav(dpad);
 }
 
 void ma2_remote_tick() {

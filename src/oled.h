@@ -7,6 +7,7 @@ void oled_init();
 void oled_loop();
 void oled_show_message(const char *msg, uint32_t duration_ms);
 void oled_handle_controller_report(const uint8_t report[63]);
+bool oled_settings_mode_active();
 
 // Return the UI to the main Status screen. Used after local controller
 // power-off/idle disconnect so the dongle is ready on Status for reconnect.

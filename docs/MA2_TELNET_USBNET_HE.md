@@ -1,3 +1,8 @@
+# עדכון v0.2.4
+
+במצב עבודה רגיל, כשה-Mute כבוי: D-Pad שולח `Next` / `Previous` ל-MA2.
+Right = `Next`, Left = `Previous`, Up = `Key Up`, Down = `Key Down`.
+
 
 ## v0.2.1
 - Build fix: added the missing public MA2 Telnet status and remote-control wrappers used by main/OLED.

@@ -1,3 +1,16 @@
+## v0.2.5
+
+- Fixed live D-Pad mapping: Right = `Next`, Left = `Previous`, Up = `Key Up`, Down = `Key Down`.
+- Settings mode remains behind Mute LED on: D-Pad edits, Triangle saves.
+
+## v0.2.3
+
+- Based on the working v0.2.1 branch.
+- Added per-zone Pan/Tilt step, adjustable from 0.1 to 20.
+- Added per-zone repeat rate in milliseconds.
+- DualSense Mute toggles Pico settings mode. Orange mute LED on: D-Pad/Triangle edit and save settings. Mute LED off: D-Pad sends Key Up/Down/Left/Right to MA2.
+- Right Stick remains dedicated to Pan/Tilt.
+
 
 ## v0.2.1
 - Build fix: added the missing public MA2 Telnet status and remote-control wrappers used by main/OLED.
