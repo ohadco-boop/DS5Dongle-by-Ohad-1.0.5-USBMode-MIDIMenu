@@ -39,15 +39,23 @@ bool chord_done = false;
 constexpr uint32_t kDebounceUs = 25000;
 constexpr uint32_t kLongUs = 900000;
 
+uint8_t pad_prev = 8;
+bool tri_prev = false;
+uint32_t pad_first_us = 0;
+uint32_t pad_last_repeat_us = 0;
+uint8_t pad_repeat_dir = 8;
+constexpr uint32_t kPadRepeatDelayUs = 450000;
+constexpr uint32_t kPadRepeatUs = 130000;
+
 int field = 0;
 constexpr int FIELD_PICO_IP0 = 0;
 constexpr int FIELD_MA2_IP0 = 4;
 constexpr int FIELD_USER0 = 8;
-constexpr int FIELD_PASS0 = 24;
-constexpr int FIELD_DEADZONE = 40;
-constexpr int FIELD_SPEED1 = 41;
-constexpr int FIELD_SPEED2 = 42;
-constexpr int FIELD_TOTAL = 43;
+constexpr int FIELD_PASS0 = 23;
+constexpr int FIELD_DEADZONE = 38;
+constexpr int FIELD_SPEED1 = 39;
+constexpr int FIELD_SPEED2 = 40;
+constexpr int FIELD_TOTAL = 41;
 
 const char* kChars = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-@!#";
 
@@ -103,10 +111,6 @@ void fb_clear() { std::memset(fb, 0, sizeof(fb)); }
 
 void pix(int x, int y, bool on = true) {
     if (x < 0 || x >= kW || y < 0 || y >= kH) return;
-    // Match the proven framebuffer bit order from the original OLED firmware.
-    // The SH1107 flush path reverses each byte before sending it, so pixels
-    // must be stored MSB-first in the framebuffer. Using LSB-first here makes
-    // the whole screen look scrambled/mirrored.
     uint8_t& b = fb[y * kRowBytes + (x >> 3)];
     uint8_t m = (uint8_t)(1u << (7 - (x & 7)));
     if (on) b |= m; else b &= (uint8_t)~m;
@@ -151,7 +155,6 @@ int char_index(char c) {
 
 void normalize_string(char s[16]) {
     s[15] = 0;
-    // Treat trailing spaces as empty, so the 2-button editor can shorten strings.
     for (int i = 14; i >= 0; --i) {
         if (s[i] == ' ') s[i] = 0;
         else if (s[i] != 0) break;
@@ -164,36 +167,61 @@ void normalize_string(char s[16]) {
     }
 }
 
-void increment_field() {
+void change_field_value(int delta) {
+    if (delta == 0) return;
     Ma2TelnetSettings s = telnet_settings_get();
     if (field >= FIELD_PICO_IP0 && field < FIELD_PICO_IP0 + 4) {
         uint8_t& v = s.pico_ip[field - FIELD_PICO_IP0];
-        v = (uint8_t)(v + 1);
+        v = (uint8_t)(v + delta);
     } else if (field >= FIELD_MA2_IP0 && field < FIELD_MA2_IP0 + 4) {
         uint8_t& v = s.ma2_ip[field - FIELD_MA2_IP0];
-        v = (uint8_t)(v + 1);
+        v = (uint8_t)(v + delta);
         s.gateway[0] = s.ma2_ip[0]; s.gateway[1] = s.ma2_ip[1]; s.gateway[2] = s.ma2_ip[2]; s.gateway[3] = s.ma2_ip[3];
-    } else if (field >= FIELD_USER0 && field < FIELD_USER0 + 16) {
-        int pos = field - FIELD_USER0;
+    } else if (field >= FIELD_USER0 && field < FIELD_USER0 + 15) {
+        const int pos = field - FIELD_USER0;
         int idx = char_index(s.username[pos]);
-        idx = (idx + 1) % (int)std::strlen(kChars);
+        const int n = (int)std::strlen(kChars);
+        idx = (idx + delta) % n;
+        if (idx < 0) idx += n;
         s.username[pos] = kChars[idx];
         normalize_string(s.username);
-    } else if (field >= FIELD_PASS0 && field < FIELD_PASS0 + 16) {
-        int pos = field - FIELD_PASS0;
+    } else if (field >= FIELD_PASS0 && field < FIELD_PASS0 + 15) {
+        const int pos = field - FIELD_PASS0;
         int idx = char_index(s.password[pos]);
-        idx = (idx + 1) % (int)std::strlen(kChars);
+        const int n = (int)std::strlen(kChars);
+        idx = (idx + delta) % n;
+        if (idx < 0) idx += n;
         s.password[pos] = kChars[idx];
         normalize_string(s.password);
     } else if (field == FIELD_DEADZONE) {
-        s.deadzone_percent = (uint8_t)((s.deadzone_percent + 1) % 16);
+        int v = (int)s.deadzone_percent + delta;
+        if (v < 0) v = 30;
+        if (v > 30) v = 0;
+        s.deadzone_percent = (uint8_t)v;
     } else if (field == FIELD_SPEED1) {
-        s.speed1_percent = (uint8_t)(10 + ((s.speed1_percent - 9) % 70));
-        if (s.speed2_percent <= s.speed1_percent) s.speed2_percent = s.speed1_percent + 1;
+        int v = (int)s.speed1_percent + delta;
+        if (v < 10) v = 80;
+        if (v > 80) v = 10;
+        s.speed1_percent = (uint8_t)v;
+        if (s.speed2_percent <= s.speed1_percent) s.speed2_percent = (uint8_t)(s.speed1_percent + 1);
+        if (s.speed2_percent > 95) s.speed2_percent = 95;
     } else if (field == FIELD_SPEED2) {
-        s.speed2_percent = (uint8_t)(s.speed1_percent + 1 + ((s.speed2_percent - s.speed1_percent) % (95 - s.speed1_percent)));
+        int v = (int)s.speed2_percent + delta;
+        const int min_v = (int)s.speed1_percent + 1;
+        if (v < min_v) v = 95;
+        if (v > 95) v = min_v;
+        s.speed2_percent = (uint8_t)v;
     }
     telnet_settings_set(s);
+    last_render_us = 0;
+}
+
+void increment_field() { change_field_value(+1); }
+void decrement_field() { change_field_value(-1); }
+
+void move_field(int delta) {
+    field = (field + delta) % FIELD_TOTAL;
+    if (field < 0) field += FIELD_TOTAL;
     last_render_us = 0;
 }
 
@@ -233,10 +261,7 @@ void handle_buttons() {
     }
 
     if (!key0_prev && k0 && (uint32_t)(now - key0_down_us) > kDebounceUs) {
-        if (!chord_done) {
-            field = (field + 1) % FIELD_TOTAL;
-            last_render_us = 0;
-        }
+        if (!chord_done) move_field(+1);
     }
     if (!key1_prev && k1 && (uint32_t)(now - key1_down_us) > kDebounceUs) {
         if (!key1_long_done && !chord_done) increment_field();
@@ -248,20 +273,53 @@ void handle_buttons() {
 }
 
 void field_label(char* out, size_t out_len) {
-    if (field >= FIELD_PICO_IP0 && field < FIELD_PICO_IP0 + 4) std::snprintf(out, out_len, "Edit Pico IP.%d", field - FIELD_PICO_IP0 + 1);
-    else if (field >= FIELD_MA2_IP0 && field < FIELD_MA2_IP0 + 4) std::snprintf(out, out_len, "Edit MA2 IP.%d", field - FIELD_MA2_IP0 + 1);
-    else if (field >= FIELD_USER0 && field < FIELD_USER0 + 16) std::snprintf(out, out_len, "Edit User[%02d]", field - FIELD_USER0);
-    else if (field >= FIELD_PASS0 && field < FIELD_PASS0 + 16) std::snprintf(out, out_len, "Edit Pass[%02d]", field - FIELD_PASS0);
-    else if (field == FIELD_DEADZONE) std::snprintf(out, out_len, "Edit Deadzone");
-    else if (field == FIELD_SPEED1) std::snprintf(out, out_len, "Edit Speed 1/2");
-    else std::snprintf(out, out_len, "Edit Speed 2/3");
+    if (field >= FIELD_PICO_IP0 && field < FIELD_PICO_IP0 + 4) std::snprintf(out, out_len, "Pico IP octet %d", field - FIELD_PICO_IP0 + 1);
+    else if (field >= FIELD_MA2_IP0 && field < FIELD_MA2_IP0 + 4) std::snprintf(out, out_len, "MA2 IP octet %d", field - FIELD_MA2_IP0 + 1);
+    else if (field >= FIELD_USER0 && field < FIELD_USER0 + 15) std::snprintf(out, out_len, "User char %02d", field - FIELD_USER0);
+    else if (field >= FIELD_PASS0 && field < FIELD_PASS0 + 15) std::snprintf(out, out_len, "Pass char %02d", field - FIELD_PASS0);
+    else if (field == FIELD_DEADZONE) std::snprintf(out, out_len, "Deadzone");
+    else if (field == FIELD_SPEED1) std::snprintf(out, out_len, "Speed 1/2");
+    else std::snprintf(out, out_len, "Speed 2/3");
+}
+
+void current_value_text(char* out, size_t out_len) {
+    const auto& s = telnet_settings_get();
+    if (field >= FIELD_PICO_IP0 && field < FIELD_PICO_IP0 + 4) {
+        std::snprintf(out, out_len, "Pico:%03u.%03u.%03u.%03u", s.pico_ip[0], s.pico_ip[1], s.pico_ip[2], s.pico_ip[3]);
+    } else if (field >= FIELD_MA2_IP0 && field < FIELD_MA2_IP0 + 4) {
+        std::snprintf(out, out_len, "MA2 :%03u.%03u.%03u.%03u", s.ma2_ip[0], s.ma2_ip[1], s.ma2_ip[2], s.ma2_ip[3]);
+    } else if (field >= FIELD_USER0 && field < FIELD_USER0 + 15) {
+        std::snprintf(out, out_len, "User:%-15s", s.username[0] ? s.username : "<blank>");
+    } else if (field >= FIELD_PASS0 && field < FIELD_PASS0 + 15) {
+        std::snprintf(out, out_len, "Pass:%-15s", s.password[0] ? s.password : "<blank>");
+    } else if (field == FIELD_DEADZONE) {
+        std::snprintf(out, out_len, "Deadzone:%u%%", s.deadzone_percent);
+    } else if (field == FIELD_SPEED1) {
+        std::snprintf(out, out_len, "S1/S2 at:%u%%", s.speed1_percent);
+    } else {
+        std::snprintf(out, out_len, "S2/S3 at:%u%%", s.speed2_percent);
+    }
+}
+
+void draw_edit_cursor() {
+    int x = -1;
+    if (field >= FIELD_PICO_IP0 && field < FIELD_PICO_IP0 + 4) {
+        const int oct = field - FIELD_PICO_IP0;
+        x = 5 * 6 + oct * 4 * 6;
+    } else if (field >= FIELD_MA2_IP0 && field < FIELD_MA2_IP0 + 4) {
+        const int oct = field - FIELD_MA2_IP0;
+        x = 5 * 6 + oct * 4 * 6;
+    } else if (field >= FIELD_USER0 && field < FIELD_USER0 + 15) {
+        x = 5 * 6 + (field - FIELD_USER0) * 6;
+    } else if (field >= FIELD_PASS0 && field < FIELD_PASS0 + 15) {
+        x = 5 * 6 + (field - FIELD_PASS0) * 6;
+    }
+    if (x >= 0 && x < kW - 5) for (int i = 0; i < 5; ++i) pix(x + i, 45);
 }
 
 void render() {
     fb_clear();
-    const auto& s = telnet_settings_get();
     char line[40];
-    char ip[24];
 
     if ((int32_t)(time_us_32() - popup_until_us) < 0) {
         text(0, 0, "DS5 -> MA2 Telnet");
@@ -271,24 +329,65 @@ void render() {
         return;
     }
 
-    text(0, 0, "DS5 MA2 TELNET USB");
-    std::snprintf(line, sizeof(line), "BT:%s  %s", bt_is_connected() ? "OK" : "WAIT", ma2_telnet_logged_in() ? "READY" : "----");
-    text(0, 10, line);
-    text(0, 20, ma2_telnet_status());
+    text(0, 0, "DS5 MA2 TELNET");
+    std::snprintf(line, sizeof(line), "BT:%s T:%s", bt_is_connected() ? "OK" : "--", ma2_telnet_logged_in() ? "READY" : "----");
+    text(0, 9, line);
+    text(0, 18, ma2_telnet_status());
 
-    ip_to_text(s.pico_ip, ip, sizeof(ip));
-    std::snprintf(line, sizeof(line), "Pico %s", ip);
-    text(0, 31, line);
-    ip_to_text(s.ma2_ip, ip, sizeof(ip));
-    std::snprintf(line, sizeof(line), "MA2  %s", ip);
-    text(0, 40, line);
-
-    char lbl[24];
+    char lbl[28];
     field_label(lbl, sizeof(lbl));
-    text(0, 51, lbl);
-    text(0, 59, "K0 next K1 + hold=save");
+    text(0, 29, lbl);
+
+    char val[40];
+    current_value_text(val, sizeof(val));
+    text(0, 38, val);
+    draw_edit_cursor();
+
+    text(0, 49, "Up/Dn field L/R edit");
+    text(0, 57, "Triangle save");
     flush();
 }
+
+void controller_nav_event(uint8_t dpad, bool triangle) {
+    const uint32_t now = time_us_32();
+
+    if (triangle && !tri_prev) save_settings();
+    tri_prev = triangle;
+
+    auto step = [](uint8_t dir) {
+        switch (dir) {
+            case 0: move_field(-1); break;      // Up
+            case 4: move_field(+1); break;      // Down
+            case 6: decrement_field(); break;   // Left
+            case 2: increment_field(); break;   // Right
+            default: break;
+        }
+    };
+
+    const bool is_cardinal = (dpad == 0 || dpad == 2 || dpad == 4 || dpad == 6);
+    if (is_cardinal && dpad != pad_prev) {
+        step(dpad);
+        pad_first_us = now;
+        pad_last_repeat_us = now;
+        pad_repeat_dir = dpad;
+    } else if (is_cardinal && dpad == pad_repeat_dir) {
+        if ((uint32_t)(now - pad_first_us) >= kPadRepeatDelayUs &&
+            (uint32_t)(now - pad_last_repeat_us) >= kPadRepeatUs) {
+            step(dpad);
+            pad_last_repeat_us = now;
+        }
+    } else if (!is_cardinal) {
+        pad_repeat_dir = 8;
+    }
+    pad_prev = dpad;
+}
+} // namespace
+
+void oled_handle_controller_report(const uint8_t report[63]) {
+    if (!report) return;
+    const uint8_t dpad = report[7] & 0x0F;
+    const bool triangle = (report[7] & 0x80) != 0;
+    controller_nav_event(dpad, triangle);
 }
 
 void oled_show_message(const char *msg, uint32_t duration_ms) {

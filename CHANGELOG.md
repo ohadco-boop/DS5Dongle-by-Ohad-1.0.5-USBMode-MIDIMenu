@@ -1,7 +1,7 @@
-## v0.1.8
+## v0.1.9
 - OLED fix: restore original framebuffer bit order to prevent scrambled/mirrored display output.
 
-## v0.1.8 buildfix7
+## v0.1.9 buildfix7
 - Fix TinyUSB `tud_network_mac_address` linker error by keeping the symbol in global C linkage and referencing it explicitly.
 
 

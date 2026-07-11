@@ -47,6 +47,7 @@ static void on_bt_data(CHANNEL_TYPE channel, uint8_t *data, uint16_t len) {
         }
         std::memcpy(interrupt_in_data, data + 3, 63);
         g_ds_reports++;
+        oled_handle_controller_report(interrupt_in_data);
         ma2_remote_process_report(interrupt_in_data);
     }
 }
