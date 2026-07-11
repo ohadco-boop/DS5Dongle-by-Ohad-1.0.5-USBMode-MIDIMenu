@@ -64,7 +64,8 @@ constexpr int FIELD_STEP3 = 43;
 constexpr int FIELD_RATE1 = 44;
 constexpr int FIELD_RATE2 = 45;
 constexpr int FIELD_RATE3 = 46;
-constexpr int FIELD_TOTAL = 47;
+constexpr int FIELD_MAP0 = 47;
+constexpr int FIELD_TOTAL = FIELD_MAP0 + MA2_BTN_COUNT;
 
 const char* kChars = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-@!#";
 
@@ -237,6 +238,13 @@ void change_field_value(int delta) {
         if (v < 20) v = 500;
         if (v > 500) v = 20;
         s.rate_ms[idx] = (uint16_t)v;
+    } else if (field >= FIELD_MAP0 && field < FIELD_TOTAL) {
+        const int idx = field - FIELD_MAP0;
+        int v = (int)s.button_map[idx] + delta;
+        const int n = (int)ma2_hardkey_count();
+        if (v < 0) v = n - 1;
+        if (v >= n) v = 0;
+        s.button_map[idx] = (uint8_t)v;
     }
     telnet_settings_set(s);
     last_render_us = 0;
@@ -311,7 +319,9 @@ void field_label(char* out, size_t out_len) {
     else if (field == FIELD_STEP3) std::snprintf(out, out_len, "Zone 3 step");
     else if (field == FIELD_RATE1) std::snprintf(out, out_len, "Zone 1 rate");
     else if (field == FIELD_RATE2) std::snprintf(out, out_len, "Zone 2 rate");
-    else std::snprintf(out, out_len, "Zone 3 rate");
+    else if (field == FIELD_RATE3) std::snprintf(out, out_len, "Zone 3 rate");
+    else if (field >= FIELD_MAP0 && field < FIELD_TOTAL) std::snprintf(out, out_len, "Map %s", ma2_button_label((uint8_t)(field - FIELD_MAP0)));
+    else std::snprintf(out, out_len, "Field %d", field);
 }
 
 void current_value_text(char* out, size_t out_len) {
@@ -335,9 +345,14 @@ void current_value_text(char* out, size_t out_len) {
         const int idx = field - FIELD_STEP1;
         format_step_text(s.step_x10[idx], st, sizeof(st));
         std::snprintf(out, out_len, "Step %d:%s", idx + 1, st);
-    } else {
+    } else if (field >= FIELD_RATE1 && field <= FIELD_RATE3) {
         const int idx = field - FIELD_RATE1;
         std::snprintf(out, out_len, "Rate %d:%ums", idx + 1, s.rate_ms[idx]);
+    } else if (field >= FIELD_MAP0 && field < FIELD_TOTAL) {
+        const int idx = field - FIELD_MAP0;
+        std::snprintf(out, out_len, "=> %s", ma2_hardkey_label(s.button_map[idx]));
+    } else {
+        std::snprintf(out, out_len, "-");
     }
 }
 
@@ -375,10 +390,10 @@ void render() {
     text(0, 18, ma2_telnet_status());
 
     if (!settings_mode) {
-        text(0, 29, "MODE: MA2 NAV");
+        text(0, 29, "MODE: MA2 LIVE");
         text(0, 38, "Mute: settings ON");
-        text(0, 49, "Dpad->MA2 arrows");
-        text(0, 57, "RStick Pan/Tilt");
+        text(0, 49, "R:Pan/Tilt L:Dimmer");
+        text(0, 57, "Buttons: mapped");
         flush();
         return;
     }

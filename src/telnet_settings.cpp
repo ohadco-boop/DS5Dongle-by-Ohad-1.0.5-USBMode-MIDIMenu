@@ -5,7 +5,7 @@
 #include "pico/stdlib.h"
 
 namespace {
-constexpr uint32_t kMagic = 0x4D413257; // "MA2W" / v0.2.3 settings layout
+constexpr uint32_t kMagic = 0x4D413258; // "MA2X" / v0.2.6 settings layout
 // Dedicated sector. Kept away from BTstack NVM and original DS5 config area.
 constexpr uint32_t kFlashOffset = PICO_FLASH_SIZE_BYTES - 7u * FLASH_SECTOR_SIZE;
 Ma2TelnetSettings g_settings{};
@@ -19,6 +19,9 @@ bool sane(const Ma2TelnetSettings& s) {
     for (int i = 0; i < 3; ++i) {
         if (s.step_x10[i] < 1 || s.step_x10[i] > 200) return false;
         if (s.rate_ms[i] < 20 || s.rate_ms[i] > 500) return false;
+    }
+    for (int i = 0; i < MA2_BTN_COUNT; ++i) {
+        if (s.button_map[i] >= MA2_HK_COUNT) return false;
     }
     return true;
 }
@@ -43,6 +46,13 @@ Ma2TelnetSettings telnet_settings_default() {
     s.rate_ms[2] = 40;
     std::strncpy(s.username, "Administrator", sizeof(s.username) - 1);
     std::strncpy(s.password, "admin", sizeof(s.password) - 1);
+
+    for (int i = 0; i < MA2_BTN_COUNT; ++i) s.button_map[i] = MA2_HK_DISABLED;
+    // Live mode defaults requested for D-Pad.
+    s.button_map[MA2_BTN_DPAD_UP] = MA2_HK_UP;
+    s.button_map[MA2_BTN_DPAD_DOWN] = MA2_HK_DOWN;
+    s.button_map[MA2_BTN_DPAD_RIGHT] = MA2_HK_NEXT;
+    s.button_map[MA2_BTN_DPAD_LEFT] = MA2_HK_PREVIOUS;
     return s;
 }
 

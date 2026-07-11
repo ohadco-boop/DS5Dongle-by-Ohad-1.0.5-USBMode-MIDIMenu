@@ -1,3 +1,9 @@
+## v0.2.6
+- Added left-stick Y Dimmer control using the same 3-zone speed/step/rate system.
+- Added configurable controller button mapping to MA2 hardkey/Telnet commands.
+- Mute button remains reserved for Settings mode toggle.
+- In Settings mode: D-Pad edits settings and Triangle saves. In Live mode: mapped buttons send MA2 commands.
+
 ## v0.2.5
 
 - Fixed live D-Pad mapping: Right = `Next`, Left = `Previous`, Up = `Key Up`, Down = `Key Down`.

@@ -1,4 +1,4 @@
-## v0.2.5
+## v0.2.6
 
 - Fixed live D-Pad mapping: Right = `Next`, Left = `Previous`, Up = `Key Up`, Down = `Key Down`.
 - Settings mode remains behind Mute LED on: D-Pad edits, Triangle saves.
@@ -38,3 +38,7 @@ docs/MA2_TELNET_USBNET_HE.md
 - TinyUSB 0.20 config updated: uses `CFG_TUD_ECM_RNDIS` instead of deprecated `CFG_TUD_NET`.
 - Removed endpoint-size redefinition warning.
 - Guards `CFG_TUSB_MCU` to avoid Pico SDK command-line redefinition.
+
+
+### v0.2.6 additions
+Left stick Y controls Dimmer. Settings now include per-zone step/rate and a button mapping menu. Mute toggles Settings mode; when Mute is off, mapped controller buttons send MA2 Telnet commands.

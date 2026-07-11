@@ -1,4 +1,4 @@
-## v0.2.5
+## v0.2.6
 
 - תיקון מיפוי D-Pad במצב עבודה רגיל: Right = `Next`, Left = `Previous`, Up = `Key Up`, Down = `Key Down`.
 - מצב הגדרות נשאר כמו קודם: Mute דולק, D-Pad עורך, Triangle שומר.
@@ -45,3 +45,7 @@ docs/MA2_TELNET_USBNET_HE.md
 - TinyUSB 0.20 config updated: uses `CFG_TUD_ECM_RNDIS` instead of deprecated `CFG_TUD_NET`.
 - Removed endpoint-size redefinition warning.
 - Guards `CFG_TUSB_MCU` to avoid Pico SDK command-line redefinition.
+
+
+### תוספות v0.2.6
+סטיק שמאלי בציר Y שולט Dimmer. בתפריט יש Step/Rate לכל Zone וגם מיפוי כפתורים. Mute מדליק/מכבה מצב הגדרות; כשהוא כבוי, הכפתורים הממופים שולחים פקודות Telnet ל-MA2.
