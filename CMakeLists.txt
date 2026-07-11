@@ -38,7 +38,7 @@ add_executable(ds5-ma2-telnet-usbnet
   src/ram_mem.c
 )
 
-set(VERSION "0.2.8" CACHE STRING "Program version string")
+set(VERSION "0.2.9" CACHE STRING "Program version string")
 string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" VERSION_SHORT "${VERSION}")
 if(NOT VERSION_SHORT)
   set(VERSION_SHORT "${VERSION}")

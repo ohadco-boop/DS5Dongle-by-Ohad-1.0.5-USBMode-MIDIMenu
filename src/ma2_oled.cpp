@@ -50,6 +50,10 @@ uint8_t pad_repeat_dir = 8;
 constexpr uint32_t kPadRepeatDelayUs = 450000;
 constexpr uint32_t kPadRepeatUs = 130000;
 
+bool battery_valid = false;
+uint8_t battery_percent = 0;
+bool battery_charging = false;
+
 int field = 0;
 constexpr int FIELD_PICO_IP0 = 0;
 constexpr int FIELD_MA2_IP0 = 4;
@@ -131,6 +135,29 @@ void rect(int x, int y, int w, int h) {
     for (int j = y; j < y + h; ++j) { pix(x, j); pix(x + w - 1, j); }
 }
 
+void fill_rect(int x, int y, int w, int h) {
+    for (int yy = y; yy < y + h; ++yy) {
+        for (int xx = x; xx < x + w; ++xx) pix(xx, yy);
+    }
+}
+
+void update_battery_from_report(const uint8_t report[63]) {
+    // DualSense 63-byte input report: byte 52 low nibble is 0..10 battery level,
+    // high nibble is power state. State 2 is full/complete.
+    const uint8_t raw = report[52];
+    uint8_t units = raw & 0x0F;
+    const uint8_t power_state = (raw >> 4) & 0x0F;
+    if (units > 10) units = 10;
+
+    const uint8_t pct = (power_state == 2) ? 100 : (uint8_t)(units * 10);
+    if (!battery_valid || battery_percent != pct || battery_charging != (power_state == 1)) {
+        battery_percent = pct;
+        battery_charging = (power_state == 1);
+        battery_valid = true;
+        last_render_us = 0;
+    }
+}
+
 void draw_char(int x, int y, char c) {
     if (c < 32 || c > 126) c = '?';
     const uint8_t* glyph = kFont5x7[c - 32];
@@ -142,6 +169,33 @@ void draw_char(int x, int y, char c) {
 
 void text(int x, int y, const char* s) {
     for (; *s && x < kW - 5; ++s, x += 6) draw_char(x, y, *s);
+}
+
+void draw_battery_status() {
+    if (!battery_valid) return;
+
+    // Small phone-like battery at top right, then percent text.
+    const int x = 88;
+    const int y = 0;
+    rect(x, y + 1, 13, 7);             // body
+    fill_rect(x + 13, y + 3, 2, 3);    // terminal
+
+    int fill = (int)battery_percent;
+    if (fill < 0) fill = 0;
+    if (fill > 100) fill = 100;
+    int fill_w = (fill * 9 + 99) / 100; // 0..9, rounded up for visible low battery
+    if (battery_percent == 0) fill_w = 0;
+    if (fill_w > 0) fill_rect(x + 2, y + 3, fill_w, 3);
+
+    if (battery_charging) {
+        // tiny + mark inside the icon when charging
+        pix(x + 6, y + 2); pix(x + 6, y + 4); pix(x + 5, y + 3); pix(x + 6, y + 3); pix(x + 7, y + 3);
+    }
+
+    char pct[8];
+    std::snprintf(pct, sizeof(pct), "%u%%", (unsigned)battery_percent);
+    const int text_x = (battery_percent >= 100) ? 104 : (battery_percent >= 10 ? 110 : 116);
+    text(text_x, y, pct);
 }
 
 void flush() {
@@ -378,6 +432,7 @@ void render() {
 
     if ((int32_t)(time_us_32() - popup_until_us) < 0) {
         text(0, 0, "DS5 -> MA2 Telnet");
+        draw_battery_status();
         rect(0, 18, 127, 28);
         text(8, 28, popup_msg);
         flush();
@@ -385,6 +440,7 @@ void render() {
     }
 
     text(0, 0, "DS5 MA2 TELNET");
+    draw_battery_status();
     std::snprintf(line, sizeof(line), "BT:%s T:%s", bt_is_connected() ? "OK" : "--", ma2_telnet_logged_in() ? "READY" : "----");
     text(0, 9, line);
     text(0, 18, ma2_telnet_status());
@@ -450,6 +506,8 @@ void controller_nav_event(uint8_t dpad, bool triangle) {
 
 void oled_handle_controller_report(const uint8_t report[63]) {
     if (!report) return;
+
+    update_battery_from_report(report);
 
     const bool mute = (report[9] & 0x04) != 0;
     if (mute && !mute_prev) {

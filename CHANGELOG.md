@@ -1,3 +1,8 @@
+## v0.2.9
+
+- Added DualSense battery percent on the main OLED screen, top-right.
+- Added a small battery icon with fill level and a tiny charging mark.
+
 # v0.2.8
 - Actually fixed the dimmer command in code: `Attribute "Dim"` is now sent instead of `Attribute "Dimmer"`.
 - No settings layout change; existing saved settings should remain valid.

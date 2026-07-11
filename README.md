@@ -1,3 +1,7 @@
+## v0.2.9
+
+- Added controller battery percent and a small battery icon on the top-right of the main OLED screen.
+
 ## v0.2.8
 
 - Fixed live D-Pad mapping: Right = `Next`, Left = `Previous`, Up = `Key Up`, Down = `Key Down`.
