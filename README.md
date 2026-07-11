@@ -41,4 +41,4 @@ docs/MA2_TELNET_USBNET_HE.md
 
 
 ### v0.2.6 additions
-Left stick Y controls Dimmer. Settings now include per-zone step/rate and a button mapping menu. Mute toggles Settings mode; when Mute is off, mapped controller buttons send MA2 Telnet commands.
+Left stick Y controls Dim. Settings now include per-zone step/rate and a button mapping menu. Mute toggles Settings mode; when Mute is off, mapped controller buttons send MA2 Telnet commands.

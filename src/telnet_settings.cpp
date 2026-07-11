@@ -5,7 +5,7 @@
 #include "pico/stdlib.h"
 
 namespace {
-constexpr uint32_t kMagic = 0x4D413258; // "MA2X" / v0.2.6 settings layout
+constexpr uint32_t kMagic = 0x4D413258; // "MA2X" / v0.2.7 settings layout
 // Dedicated sector. Kept away from BTstack NVM and original DS5 config area.
 constexpr uint32_t kFlashOffset = PICO_FLASH_SIZE_BYTES - 7u * FLASH_SECTOR_SIZE;
 Ma2TelnetSettings g_settings{};

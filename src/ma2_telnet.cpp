@@ -466,7 +466,7 @@ void ma2_telnet_drive_right_stick(int x, int y) {
 }
 
 void ma2_telnet_drive_left_stick_dimmer(int y) {
-    // Left stick Y controls dimmer. Stick up increases Dimmer, down decreases.
+    // Left stick Y controls dimmer. Stick up increases Dim, down decreases.
     uint8_t sy = speed_for_abs(y < 0 ? -y : y);
     if (y < 0) maybe_send_dir(4, sy);
     else if (y > 0) maybe_send_dir(5, sy);

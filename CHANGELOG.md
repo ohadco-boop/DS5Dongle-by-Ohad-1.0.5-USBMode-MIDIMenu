@@ -1,5 +1,8 @@
+# v0.2.7
+- Fixed MA2 dimmer attribute command to use `Attribute "Dim"` instead of `Attribute "Dimmer"`.
+
 ## v0.2.6
-- Added left-stick Y Dimmer control using the same 3-zone speed/step/rate system.
+- Added left-stick Y Dim control using the same 3-zone speed/step/rate system.
 - Added configurable controller button mapping to MA2 hardkey/Telnet commands.
 - Mute button remains reserved for Settings mode toggle.
 - In Settings mode: D-Pad edits settings and Triangle saves. In Live mode: mapped buttons send MA2 commands.

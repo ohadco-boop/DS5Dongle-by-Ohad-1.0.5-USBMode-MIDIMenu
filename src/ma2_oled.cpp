@@ -392,7 +392,7 @@ void render() {
     if (!settings_mode) {
         text(0, 29, "MODE: MA2 LIVE");
         text(0, 38, "Mute: settings ON");
-        text(0, 49, "R:Pan/Tilt L:Dimmer");
+        text(0, 49, "R:Pan/Tilt L:Dim");
         text(0, 57, "Buttons: mapped");
         flush();
         return;
