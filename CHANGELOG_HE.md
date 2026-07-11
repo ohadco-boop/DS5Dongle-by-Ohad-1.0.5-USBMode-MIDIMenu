@@ -1,3 +1,6 @@
+## v0.1.7 buildfix7
+- תיקון שגיאת linker של TinyUSB סביב `tud_network_mac_address` על ידי שמירת הסימבול כגלובלי עם C linkage.
+
 
 ## 0.1.6
 - תיקון קימפול: הוספת TinyUSB lib/networking ו-rndis_reports.c בשביל USB RNDIS/ECM.

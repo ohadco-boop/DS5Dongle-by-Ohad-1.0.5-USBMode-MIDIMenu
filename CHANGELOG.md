@@ -1,3 +1,6 @@
+## v0.1.7 buildfix7
+- Fix TinyUSB `tud_network_mac_address` linker error by keeping the symbol in global C linkage and referencing it explicitly.
+
 
 ## 0.1.6
 - Build fix: add TinyUSB lib/networking include path and rndis_reports.c for USB RNDIS/ECM.

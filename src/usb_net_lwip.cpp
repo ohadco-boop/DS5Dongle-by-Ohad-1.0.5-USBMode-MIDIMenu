@@ -9,6 +9,11 @@
 #include <cstdio>
 #include <cstring>
 
+// TinyUSB network class expects this exact global C symbol.
+// Keep it outside the anonymous namespace; otherwise the linker looks for
+// (anonymous namespace)::tud_network_mac_address and fails.
+extern "C" uint8_t tud_network_mac_address[6];
+
 namespace {
 netif g_netif{};
 bool g_lwip_inited = false;
@@ -38,8 +43,7 @@ err_t usb_netif_init(netif* n) {
     n->mtu = 1500;
     n->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP;
     n->hwaddr_len = 6;
-    extern uint8_t tud_network_mac_address[6];
-    std::memcpy(n->hwaddr, tud_network_mac_address, 6);
+    std::memcpy(n->hwaddr, ::tud_network_mac_address, 6);
     set_status("USBNet up");
     return ERR_OK;
 }
