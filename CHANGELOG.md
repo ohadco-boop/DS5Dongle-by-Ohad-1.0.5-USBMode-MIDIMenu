@@ -1,3 +1,8 @@
+## v0.2.11
+- Fixed MA2 Telnet command hang after idle by adding a silent 25s Telnet heartbeat.
+- Telnet command writes now detect send-buffer/write/output failures and schedule a fast reconnect instead of staying stuck in `TELNET cmd`.
+- Kept the previous OLED READY fix: `TELNET cmd` is temporary and returns to `TELNET ready`.
+
 ## v0.2.9
 
 - Added DualSense battery percent on the main OLED screen, top-right.

@@ -1,3 +1,6 @@
+## v0.2.11
+MA2 Telnet stability fix: silent 25s heartbeat, checked command writes, fast reconnect on failed send, and temporary `TELNET cmd` OLED status.
+
 ## v0.2.9
 
 - Added controller battery percent and a small battery icon on the top-right of the main OLED screen.

@@ -1,3 +1,8 @@
+## v0.2.11
+- תיקון תקיעת פקודות MA2 Telnet אחרי המתנה: נוסף heartbeat שקט כל 25 שניות.
+- שליחת פקודת Telnet מזהה כשל כתיבה / send-buffer מלא / output error ומבצעת reconnect מהיר במקום להיתקע על `TELNET cmd`.
+- נשמר תיקון התצוגה: `TELNET cmd` מוצג זמנית וחוזר ל־`TELNET ready`.
+
 ## v0.2.9
 
 - נוסף אחוז סוללה של ה-DualSense במסך הראשי בצד ימין למעלה.

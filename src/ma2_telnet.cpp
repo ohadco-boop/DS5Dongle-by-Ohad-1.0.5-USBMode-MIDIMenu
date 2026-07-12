@@ -17,6 +17,10 @@ uint32_t g_connected_at_us = 0;
 uint32_t g_next_connect_us = 0;
 uint32_t g_next_login_us = 0;
 char g_status[32] = "TELNET idle";
+uint32_t g_cmd_status_until_us = 0;
+uint32_t g_last_tx_us = 0;
+bool g_drop_pending = false;
+char g_drop_status[32] = "TELNET retry";
 
 uint32_t g_last_dir_send_us[6] = {0, 0, 0, 0, 0, 0};
 uint8_t g_last_dir_speed[6] = {0, 0, 0, 0, 0, 0};
@@ -29,6 +33,9 @@ uint32_t g_nav_last_us = 0;
 constexpr uint32_t kRetryUs = 2000000;
 constexpr uint32_t kLoginDelayUs = 250000;
 constexpr uint32_t kLoginAssumeReadyUs = 900000;
+constexpr uint32_t kCmdStatusUs = 250000;
+constexpr uint32_t kHeartbeatUs = 25000000;
+constexpr uint32_t kFastRetryUs = 300000;
 
 constexpr uint8_t IAC  = 255;
 constexpr uint8_t DONT = 254;
@@ -95,6 +102,35 @@ const HardkeyDef kHardkeys[MA2_HK_COUNT] = {
 
 void set_status(const char* s) { std::snprintf(g_status, sizeof(g_status), "%s", s); }
 
+void request_drop(const char* status) {
+    std::snprintf(g_drop_status, sizeof(g_drop_status), "%s", status ? status : "TELNET retry");
+    g_connected = false;
+    g_logged_in = false;
+    g_login_sent = false;
+    g_cmd_status_until_us = 0;
+    g_drop_pending = true;
+    set_status(g_drop_status);
+}
+
+void abort_pending_conn() {
+    if (g_pcb) {
+        tcp_arg(g_pcb, nullptr);
+        tcp_recv(g_pcb, nullptr);
+        tcp_sent(g_pcb, nullptr);
+        tcp_err(g_pcb, nullptr);
+        tcp_abort(g_pcb);
+        g_pcb = nullptr;
+    }
+    g_connected = false;
+    g_logged_in = false;
+    g_login_sent = false;
+    g_cmd_status_until_us = 0;
+    g_last_tx_us = 0;
+    g_drop_pending = false;
+    set_status(g_drop_status);
+    g_next_connect_us = time_us_32() + kFastRetryUs;
+}
+
 void close_conn() {
     if (g_pcb) {
         tcp_arg(g_pcb, nullptr);
@@ -107,8 +143,42 @@ void close_conn() {
     g_connected = false;
     g_logged_in = false;
     g_login_sent = false;
+    g_cmd_status_until_us = 0;
+    g_last_tx_us = 0;
+    g_drop_pending = false;
     set_status("TELNET closed");
     g_next_connect_us = time_us_32() + kRetryUs;
+}
+
+bool send_checked_bytes(const uint8_t* data, uint16_t len) {
+    if (!g_pcb || !data || len == 0 || g_drop_pending) return false;
+    if (tcp_sndbuf(g_pcb) < len) {
+        request_drop("TELNET retry");
+        return false;
+    }
+    err_t e = tcp_write(g_pcb, data, len, TCP_WRITE_FLAG_COPY);
+    if (e != ERR_OK) {
+        request_drop("TELNET retry");
+        return false;
+    }
+    e = tcp_output(g_pcb);
+    if (e != ERR_OK) {
+        request_drop("TELNET retry");
+        return false;
+    }
+    g_last_tx_us = time_us_32();
+    return true;
+}
+
+bool send_line_checked(const char* line) {
+    if (!line) return false;
+    const size_t len = std::strlen(line);
+    if (len + 2 > 159) return false;
+    char buf[160];
+    std::memcpy(buf, line, len);
+    buf[len] = '\r';
+    buf[len + 1] = '\n';
+    return send_checked_bytes(reinterpret_cast<const uint8_t*>(buf), (uint16_t)(len + 2));
 }
 
 void send_raw_bytes(const uint8_t* data, uint16_t len) {
@@ -127,9 +197,8 @@ void send_raw(const char* text) {
     tcp_output(g_pcb);
 }
 
-void send_line(const char* line) {
-    send_raw(line);
-    send_raw("\r\n");
+bool send_line(const char* line) {
+    return send_line_checked(line ? line : "");
 }
 
 void append_quoted(char* out, size_t out_sz, size_t& pos, const char* v) {
@@ -155,12 +224,16 @@ void build_login_command(char* out, size_t out_sz) {
     if (pos < out_sz) out[pos] = 0;
 }
 
-void send_login() {
+bool send_login() {
     char cmd[96];
     build_login_command(cmd, sizeof(cmd));
-    send_line(cmd);
+    if (!send_line(cmd)) {
+        request_drop("TELNET retry");
+        return false;
+    }
     g_login_sent = true;
     set_status("TELNET login");
+    return true;
 }
 
 err_t on_connected(void*, tcp_pcb* pcb, err_t err) {
@@ -177,6 +250,9 @@ err_t on_connected(void*, tcp_pcb* pcb, err_t err) {
     g_login_sent = false;
     g_connected_at_us = time_us_32();
     g_next_login_us = g_connected_at_us + kLoginDelayUs;
+    g_last_tx_us = 0;
+    g_cmd_status_until_us = 0;
+    g_drop_pending = false;
     set_status("TELNET open");
     return ERR_OK;
 }
@@ -384,12 +460,28 @@ void ma2_telnet_init() {
 
 void ma2_telnet_tick() {
     const uint32_t now = time_us_32();
+    if (g_drop_pending) {
+        abort_pending_conn();
+        return;
+    }
     if (!g_connected && !g_pcb && (int32_t)(now - g_next_connect_us) >= 0) start_connect();
     if (g_connected && !g_login_sent && (int32_t)(now - g_next_login_us) >= 0) send_login();
     if (g_connected && g_login_sent && !g_logged_in && (uint32_t)(now - g_connected_at_us) > kLoginAssumeReadyUs) {
         // MA2 feedback varies; after sending Login, allow commands unless socket closes.
         g_logged_in = true;
         set_status("TELNET ready");
+    }
+    if (g_cmd_status_until_us && g_connected && g_logged_in &&
+        (int32_t)(now - g_cmd_status_until_us) >= 0 &&
+        std::strcmp(g_status, "TELNET cmd") == 0) {
+        g_cmd_status_until_us = 0;
+        set_status("TELNET ready");
+    }
+    if (g_connected && g_logged_in && !g_drop_pending &&
+        (g_last_tx_us == 0 || (uint32_t)(now - g_last_tx_us) >= kHeartbeatUs)) {
+        // Keep the MA2 Telnet socket alive without changing the OLED to TELNET cmd.
+        // An empty line is safe for the MA2 command line and prevents idle timeout.
+        send_line("");
     }
 }
 
@@ -400,14 +492,23 @@ bool ma2_telnet_logged_in() { return g_connected && g_logged_in; }
 const char* ma2_telnet_status() { return g_status; }
 
 void ma2_telnet_send_command(const char* cmd) {
-    if (!cmd || !g_connected || !g_pcb) return;
+    if (!cmd || !cmd[0] || g_drop_pending) return;
+    if (!g_connected || !g_pcb) {
+        g_next_connect_us = time_us_32() + kFastRetryUs;
+        set_status("TELNET retry");
+        return;
+    }
     if (!g_login_sent) {
         send_login();
         return;
     }
     if (!g_logged_in) return;
-    send_line(cmd);
+    if (!send_line(cmd)) {
+        request_drop("TELNET retry");
+        return;
+    }
     set_status("TELNET cmd");
+    g_cmd_status_until_us = time_us_32() + kCmdStatusUs;
 }
 
 
