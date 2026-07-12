@@ -14,8 +14,12 @@ bool g_connected = false;
 bool g_logged_in = false;
 bool g_login_sent = false;
 uint32_t g_connected_at_us = 0;
+uint32_t g_connect_started_us = 0;
+uint32_t g_login_sent_at_us = 0;
 uint32_t g_next_connect_us = 0;
 uint32_t g_next_login_us = 0;
+uint32_t g_next_login_retry_us = 0;
+uint8_t g_login_retries = 0;
 char g_status[32] = "TELNET idle";
 uint32_t g_cmd_status_until_us = 0;
 uint32_t g_last_tx_us = 0;
@@ -36,6 +40,9 @@ constexpr uint32_t kLoginAssumeReadyUs = 900000;
 constexpr uint32_t kCmdStatusUs = 250000;
 constexpr uint32_t kHeartbeatUs = 25000000;
 constexpr uint32_t kFastRetryUs = 300000;
+constexpr uint32_t kConnectTimeoutUs = 5000000;
+constexpr uint32_t kLoginRetryUs = 1000000;
+constexpr uint32_t kLoginDropUs = 6000000;
 
 constexpr uint8_t IAC  = 255;
 constexpr uint8_t DONT = 254;
@@ -44,6 +51,7 @@ constexpr uint8_t WONT = 252;
 constexpr uint8_t WILL = 251;
 constexpr uint8_t SB   = 250;
 constexpr uint8_t SE   = 240;
+constexpr uint8_t NOP  = 241;
 constexpr uint8_t TEL_ECHO = 1;
 constexpr uint8_t TEL_SGA  = 3;
 constexpr uint8_t TEL_TTYPE = 24;
@@ -107,6 +115,9 @@ void request_drop(const char* status) {
     g_connected = false;
     g_logged_in = false;
     g_login_sent = false;
+    g_login_sent_at_us = 0;
+    g_next_login_retry_us = 0;
+    g_login_retries = 0;
     g_cmd_status_until_us = 0;
     g_drop_pending = true;
     set_status(g_drop_status);
@@ -124,6 +135,9 @@ void abort_pending_conn() {
     g_connected = false;
     g_logged_in = false;
     g_login_sent = false;
+    g_login_sent_at_us = 0;
+    g_next_login_retry_us = 0;
+    g_login_retries = 0;
     g_cmd_status_until_us = 0;
     g_last_tx_us = 0;
     g_drop_pending = false;
@@ -143,6 +157,9 @@ void close_conn() {
     g_connected = false;
     g_logged_in = false;
     g_login_sent = false;
+    g_login_sent_at_us = 0;
+    g_next_login_retry_us = 0;
+    g_login_retries = 0;
     g_cmd_status_until_us = 0;
     g_last_tx_us = 0;
     g_drop_pending = false;
@@ -186,6 +203,7 @@ void send_raw_bytes(const uint8_t* data, uint16_t len) {
     if (tcp_sndbuf(g_pcb) < len) return;
     tcp_write(g_pcb, data, len, TCP_WRITE_FLAG_COPY);
     tcp_output(g_pcb);
+    g_last_tx_us = time_us_32();
 }
 
 void send_raw(const char* text) {
@@ -195,10 +213,16 @@ void send_raw(const char* text) {
     if (tcp_sndbuf(g_pcb) < len) return;
     tcp_write(g_pcb, text, (uint16_t)len, TCP_WRITE_FLAG_COPY);
     tcp_output(g_pcb);
+    g_last_tx_us = time_us_32();
 }
 
 bool send_line(const char* line) {
     return send_line_checked(line ? line : "");
+}
+
+bool send_telnet_nop() {
+    const uint8_t nop[2] = {IAC, NOP};
+    return send_checked_bytes(nop, sizeof(nop));
 }
 
 void append_quoted(char* out, size_t out_sz, size_t& pos, const char* v) {
@@ -232,6 +256,9 @@ bool send_login() {
         return false;
     }
     g_login_sent = true;
+    g_login_sent_at_us = time_us_32();
+    g_next_login_retry_us = g_login_sent_at_us + kLoginRetryUs;
+    if (g_login_retries < 255) ++g_login_retries;
     set_status("TELNET login");
     return true;
 }
@@ -250,7 +277,10 @@ err_t on_connected(void*, tcp_pcb* pcb, err_t err) {
     g_login_sent = false;
     g_connected_at_us = time_us_32();
     g_next_login_us = g_connected_at_us + kLoginDelayUs;
-    g_last_tx_us = 0;
+    g_login_sent_at_us = 0;
+    g_next_login_retry_us = 0;
+    g_login_retries = 0;
+    g_last_tx_us = g_connected_at_us;
     g_cmd_status_until_us = 0;
     g_drop_pending = false;
     set_status("TELNET open");
@@ -262,6 +292,9 @@ void on_error(void*, err_t) {
     g_connected = false;
     g_logged_in = false;
     g_login_sent = false;
+    g_login_sent_at_us = 0;
+    g_next_login_retry_us = 0;
+    g_login_retries = 0;
     set_status("TELNET error");
     g_next_connect_us = time_us_32() + kRetryUs;
 }
@@ -327,6 +360,7 @@ err_t on_recv(void*, tcp_pcb* pcb, pbuf* p, err_t err) {
         return ERR_OK;
     }
     tcp_recved(pcb, p->tot_len);
+    // Any data from MA2 proves the connection is alive.
 
     char text[256]{};
     uint16_t pos = 0;
@@ -348,6 +382,7 @@ err_t on_recv(void*, tcp_pcb* pcb, pbuf* p, err_t err) {
     }
     if (g_login_sent && (ascii_contains(text, ">") || ascii_contains(text, "logged") || ascii_contains(text, "ok") || ascii_contains(text, "grandma"))) {
         g_logged_in = true;
+        g_login_retries = 0;
         set_status("TELNET ready");
     }
     return ERR_OK;
@@ -368,11 +403,14 @@ void start_connect() {
     tcp_recv(g_pcb, on_recv);
     tcp_sent(g_pcb, on_sent);
     tcp_err(g_pcb, on_error);
+    tcp_nagle_disable(g_pcb);
+    g_connect_started_us = time_us_32();
     set_status("TELNET connect");
     const err_t e = tcp_connect(g_pcb, &target, s.ma2_port, on_connected);
     if (e != ERR_OK) {
         tcp_abort(g_pcb);
         g_pcb = nullptr;
+        g_connect_started_us = 0;
         set_status("TELNET wait");
         g_next_connect_us = time_us_32() + kRetryUs;
     }
@@ -460,28 +498,53 @@ void ma2_telnet_init() {
 
 void ma2_telnet_tick() {
     const uint32_t now = time_us_32();
+
     if (g_drop_pending) {
         abort_pending_conn();
         return;
     }
-    if (!g_connected && !g_pcb && (int32_t)(now - g_next_connect_us) >= 0) start_connect();
-    if (g_connected && !g_login_sent && (int32_t)(now - g_next_login_us) >= 0) send_login();
-    if (g_connected && g_login_sent && !g_logged_in && (uint32_t)(now - g_connected_at_us) > kLoginAssumeReadyUs) {
-        // MA2 feedback varies; after sending Login, allow commands unless socket closes.
-        g_logged_in = true;
-        set_status("TELNET ready");
+
+    // If a TCP connect attempt gets stuck, abort it and try again.
+    if (g_pcb && !g_connected && g_connect_started_us &&
+        (uint32_t)(now - g_connect_started_us) >= kConnectTimeoutUs) {
+        request_drop("TELNET retry");
+        return;
     }
+
+    if (!g_connected && !g_pcb && (int32_t)(now - g_next_connect_us) >= 0) start_connect();
+
+    if (g_connected && !g_login_sent && (int32_t)(now - g_next_login_us) >= 0) {
+        send_login();
+    }
+
+    // Some MA2 builds do not reply consistently after Login. Retry Login a few times,
+    // then recycle the socket instead of staying forever on T:---- / TELNET retry.
+    if (g_connected && g_login_sent && !g_logged_in) {
+        if ((uint32_t)(now - g_connected_at_us) >= kLoginDropUs) {
+            request_drop("TELNET retry");
+            return;
+        }
+        if ((int32_t)(now - g_next_login_retry_us) >= 0 && g_login_retries < 3) {
+            send_login();
+        }
+        if ((uint32_t)(now - g_connected_at_us) > kLoginAssumeReadyUs) {
+            // MA2 feedback varies; after sending Login, allow commands unless socket closes.
+            g_logged_in = true;
+            set_status("TELNET ready");
+        }
+    }
+
     if (g_cmd_status_until_us && g_connected && g_logged_in &&
         (int32_t)(now - g_cmd_status_until_us) >= 0 &&
         std::strcmp(g_status, "TELNET cmd") == 0) {
         g_cmd_status_until_us = 0;
         set_status("TELNET ready");
     }
+
     if (g_connected && g_logged_in && !g_drop_pending &&
         (g_last_tx_us == 0 || (uint32_t)(now - g_last_tx_us) >= kHeartbeatUs)) {
-        // Keep the MA2 Telnet socket alive without changing the OLED to TELNET cmd.
-        // An empty line is safe for the MA2 command line and prevents idle timeout.
-        send_line("");
+        // Real Telnet NOP keep-alive: keeps TCP active without entering an empty MA2 command.
+        if (!send_telnet_nop()) request_drop("TELNET retry");
     }
 }
 
@@ -494,7 +557,8 @@ const char* ma2_telnet_status() { return g_status; }
 void ma2_telnet_send_command(const char* cmd) {
     if (!cmd || !cmd[0] || g_drop_pending) return;
     if (!g_connected || !g_pcb) {
-        g_next_connect_us = time_us_32() + kFastRetryUs;
+        // Start reconnect immediately; do not wait for a physical replug.
+        g_next_connect_us = time_us_32();
         set_status("TELNET retry");
         return;
     }
@@ -502,7 +566,11 @@ void ma2_telnet_send_command(const char* cmd) {
         send_login();
         return;
     }
-    if (!g_logged_in) return;
+    if (!g_logged_in) {
+        const uint32_t now = time_us_32();
+        if ((int32_t)(now - g_next_login_retry_us) >= 0) send_login();
+        return;
+    }
     if (!send_line(cmd)) {
         request_drop("TELNET retry");
         return;

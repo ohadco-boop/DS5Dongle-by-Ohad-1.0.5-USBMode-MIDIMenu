@@ -1,3 +1,8 @@
+## v0.2.12
+- Telnet stability pass: uses real Telnet NOP keep-alive instead of empty command lines.
+- Added connect/login timeouts so T:---- / TELNET retry cannot stay stuck until USB replug.
+- Retains the v0.2.11 temporary TELNET cmd display fix.
+
 ## v0.2.11
 - Fixed MA2 Telnet command hang after idle by adding a silent 25s Telnet heartbeat.
 - Telnet command writes now detect send-buffer/write/output failures and schedule a fast reconnect instead of staying stuck in `TELNET cmd`.
