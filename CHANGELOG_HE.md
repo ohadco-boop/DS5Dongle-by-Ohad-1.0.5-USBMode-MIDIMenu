@@ -1,12 +1,9 @@
-## v0.2.12
-- תיקון יציבות Telnet: keep-alive אמיתי מסוג Telnet NOP במקום שליחת שורה ריקה.
-- נוספו timeout ל-connect ול-login כדי ש-T:---- / TELNET retry לא ייתקעו עד ניתוק USB.
-- כולל את תיקון v0.2.11 שבו TELNET cmd מוצג זמנית בלבד.
+## v0.2.14-clean-telnet
 
-## v0.2.11
-- תיקון תקיעת פקודות MA2 Telnet אחרי המתנה: נוסף heartbeat שקט כל 25 שניות.
-- שליחת פקודת Telnet מזהה כשל כתיבה / send-buffer מלא / output error ומבצעת reconnect מהיר במקום להיתקע על `TELNET cmd`.
-- נשמר תיקון התצוגה: `TELNET cmd` מוצג זמנית וחוזר ל־`TELNET ready`.
+- חזרה ללוגיקת Telnet נקייה על בסיס v0.2.9.
+- נשאר רק תיקון תצוגה: `TELNET cmd` מוצג רגעית וחוזר ל־`TELNET ready`.
+- הוסרה שורת UI מבלבלת `Mute: settings ON`; הוחלפה ב־`Mute -> Settings`.
+- ללא keepalive / refresh / reconnect אגרסיבי.
 
 ## v0.2.9
 
